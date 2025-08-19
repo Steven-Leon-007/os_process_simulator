@@ -1,0 +1,52 @@
+:root {
+  /* Paleta de colores principales */
+  --color-primary: #131F24;
+  --color-secondary: #151e22d2;
+  --color-accent: #2B458C;
+  --color-hover: #202F36;
+  --color-decoration: #1d6826;
+  --color-decoration-hover: #1d8b2a;
+
+  /* Colores de texto */
+  --color-text-primary: #F5F5F5;
+  --color-text-secondary: #c1c3ce;
+  --color-text-muted: #ffffffa4;
+  --color-error: #ce2c2c;
+  --color-error-hover: #e01212;
+
+  /* Colores de fondo y bordes */
+  --color-bg-secondary: #2B2F3A;
+  --color-bg-button: #2B458C;
+  --color-bg-button-hover: #2c50b2;
+  --color-border: #39404d65;
+  --color-border-home: #323232;
+
+  /* Colores para efectos */
+  --color-placeholder: #80838F;
+  --color-gradient-dark: #0d1418e6;
+  --color-gradient-medium: #0f0f1d99;
+  --color-gradient-light: #1717274d;
+}
+
+body {
+  font-family: "Raleway", serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  color: var(--color-text-primary);
+}
+
+h1 {
+  font-family: "Roboto", sans-serif;
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+button {
+  color: var(--color-text-primary);
+  font-family: "Raleway", serif;
+  cursor: pointer;
+}
