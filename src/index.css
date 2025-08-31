@@ -37,6 +37,7 @@ body {
   padding: 0;
   box-sizing: border-box;
   color: var(--color-text-primary);
+  background-color: var(--color-bg-secondary);
 }
 
 h1 {

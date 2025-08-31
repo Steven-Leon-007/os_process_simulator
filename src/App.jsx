@@ -1,10 +1,9 @@
 import React from "react"
+import AppShell from "./components/app-shell/AppShell"
 
 const App = () => {
   return (
-    <>
-      <h1>OS project</h1>
-    </>
+    <AppShell />
   )
 }
 

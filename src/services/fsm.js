@@ -3,7 +3,7 @@ import { getTimestamp } from "../utils/time.js";
 /**
  * Estados posibles de un proceso.
  */
-const STATES = {
+export const STATES = {
   /**
    * El proceso acaba de crearse.
    */

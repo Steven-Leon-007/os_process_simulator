@@ -11,12 +11,14 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@xyflow/react": "^12.8.4",
     "date-fns": "^4.1.0",
     "howler": "^2.2.4",
     "motion": "^12.23.12",
     "papaparse": "^5.5.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-force-graph-2d": "^1.28.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
