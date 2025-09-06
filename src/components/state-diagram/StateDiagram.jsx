@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
-import { ReactFlow, Handle, Position, MarkerType, applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
+import { ReactFlow, applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { motion } from "framer-motion";
 import { STATES } from '../../services/fsm'
 import "./StateDiagram.css"
 import { useSim } from "../../context/SimulationContext";
@@ -10,6 +9,9 @@ import ProcessNode from "./nodes/ProcessNode";
 import { getActionsByState, getPositions, STATE_COLORS } from "./utils/constants";
 import FlyingOverlay from "./components/FlyingOverlay";
 import ProcessMenu from "./components/ProcessMenu";
+import { useProcessNodes } from "./hooks/useProcessNodes";
+import { useStateEdges } from "./hooks/useStateEdges";
+import { useStateNodes } from "./hooks/useStateNodes";
 
 const nodeTypes = {
   stateNode: StateNode,
@@ -24,18 +26,17 @@ const StateDiagram = () => {
   const [positionOverrides, setPositionOverrides] = useState({});
   const [processPositionOverrides, setProcessPositionOverrides] = useState({});
 
-  const [baseNodes, setBaseNodes] = useState([]);
+  const [baseNodes, setBaseNodes] = useStateNodes(positions, positionOverrides);
   const [nodes, setNodes] = useState([]);
-  const [edges, setEdges] = useState([]);
+  const [edges, setEdges] = useStateEdges();
   const { state: simState, admit, assignCPU, terminate, preempt, requestIO, ioComplete } = useSim();
   const [menu, setMenu] = useState(null);
   const menuRef = useRef(null);
 
-  // --- NUEVO: estado para animaciones voladoras ---
-  const [flying, setFlying] = useState([]); // array de { pid, from:{x,y}, to:{x,y}, color, key }
+  // --- estado para animaciones voladoras ---
+  const [flying, setFlying] = useState([]);
   const flyingRef = useRef([]);
   const [hiddenPids, setHiddenPids] = useState(new Set()); // pids ocultos durante animación
-  // ---------------------------------------------------
 
   useEffect(() => {
     try {
@@ -74,7 +75,6 @@ const StateDiagram = () => {
         setMenu(null);
       }
     };
-
     if (menu) {
       document.addEventListener("mousedown", handleClickOutside);
     }
@@ -84,169 +84,18 @@ const StateDiagram = () => {
     };
   }, [menu]);
 
-  useEffect(() => {
-    const initialNodes = Object.entries(STATES).map(([key, value]) => ({
-      id: value,
-      type: "stateNode",
-      position: positionOverrides[value] || positions[value],
-      data: {
-        label: value,
-        color: STATE_COLORS[value],
-        id: value
-      },
-      draggable: true,
-    }));
 
-    setBaseNodes(initialNodes);
-  }, [positions, positionOverrides]);
-
-  useEffect(() => {
-    const initialEdges = [
-      {
-        id: "e1",
-        source: STATES.NEW,
-        sourceHandle: 'source-bottom',
-        target: STATES.READY,
-        targetHandle: 'target-left',
-        animated: true,
-        markerEnd: { type: MarkerType.ArrowClosed, color: "#fff" },
-        style: {
-          stroke: "#bbb",
-          strokeDasharray: "5 5",
-        },
-      },
-      {
-        id: "e2",
-        source: STATES.READY,
-        sourceHandle: 'source-right',
-        target: STATES.RUNNING,
-        targetHandle: 'target-left',
-        animated: true,
-        markerEnd: { type: MarkerType.ArrowClosed, color: "#fff" },
-        style: {
-          stroke: "#bbb",
-          strokeDasharray: "5 5",
-        },
-        className: "edge-ready-running"
-      },
-      {
-        id: "e3",
-        source: STATES.RUNNING,
-        sourceHandle: 'source-left',
-        target: STATES.READY,
-        targetHandle: 'target-right',
-        animated: true,
-        markerEnd: { type: MarkerType.ArrowClosed, color: "#fff" },
-        style: {
-          stroke: "#bbb",
-          strokeDasharray: "5 5",
-        },
-        className: "edge-running-ready"
-      },
-      {
-        id: "e4",
-        source: STATES.RUNNING,
-        sourceHandle: 'source-bottom',
-        target: STATES.WAITING,
-        targetHandle: 'target-right',
-        animated: true,
-        markerEnd: { type: MarkerType.ArrowClosed, color: "#fff" },
-        style: {
-          stroke: "#bbb",
-          strokeDasharray: "5 5",
-        },
-      },
-      {
-        id: "e5",
-        source: STATES.WAITING,
-        sourceHandle: 'source-left',
-        target: STATES.READY,
-        targetHandle: 'target-bottom',
-        animated: true,
-        markerEnd: { type: MarkerType.ArrowClosed, color: "#fff" },
-        style: {
-          stroke: "#bbb",
-          strokeDasharray: "5 5",
-        },
-      },
-      {
-        id: "e6",
-        source: STATES.RUNNING,
-        sourceHandle: 'source-right',
-        target: STATES.TERMINATED,
-        targetHandle: 'target-bottom',
-        animated: true,
-        markerEnd: { type: MarkerType.ArrowClosed, color: "#fff" },
-        style: {
-          stroke: "#bbb",
-          strokeDasharray: "5 5",
-        },
-      },
-    ];
-
-    setEdges(initialEdges);
-  }, []);
-
+  useProcessNodes({
+    simState,
+    baseNodes,
+    positions,
+    positionOverrides,
+    processPositionOverrides,
+    hiddenPids,
+    STATE_COLORS,
+    setNodes,
+  });
   // --- Construcción de nodes: omitimos los procesos que están en 'hiddenPids' para que no aparezcan duplicados durante anim. ---
-  useEffect(() => {
-    const grouped = {};
-    simState.processes.forEach((p) => {
-      const st = p.state;
-      if (!grouped[st]) grouped[st] = [];
-      grouped[st].push(p);
-    });
-
-    const processNodes = [];
-    Object.entries(grouped).forEach(([stateName, arr]) => {
-      var horizontalGap = (stateName == "Terminated") ? 60 : 42;
-      var perRowProcesses = (stateName == "Terminated") ? 2 : 3;
-
-      arr.forEach((proc, idx) => {
-        const pidStr = proc.pid.toString();
-
-        // si está animando lo omitimos (lo mostramos en overlay flying)
-        if (hiddenPids.has(pidStr)) return;
-
-        if (processPositionOverrides[pidStr]) {
-          processNodes.push({
-            id: pidStr,
-            type: "processNode",
-            position: processPositionOverrides[pidStr],
-            data: {
-              pid: proc.pid,
-              state: proc.state,
-              index: idx,
-              color: STATE_COLORS[proc.state] || '#999'
-            },
-            draggable: false,
-          });
-          return;
-        }
-
-        const basePos = positionOverrides[stateName] || positions[stateName] || { x: 100, y: 100 };
-        const perRow = perRowProcesses;
-        const gapX = horizontalGap;
-        const gapY = 42;
-        const offsetX = (idx % perRow) * gapX;
-        const offsetY = Math.floor(idx / perRow) * gapY + 70;
-
-        processNodes.push({
-          id: pidStr,
-          type: "processNode",
-          position: { x: basePos.x + offsetX, y: basePos.y + offsetY },
-          data: {
-            pid: proc.pid,
-            state: proc.state,
-            index: idx,
-            color: STATE_COLORS[proc.state] || '#999'
-          },
-          draggable: false,
-        });
-      });
-    });
-
-    setNodes([...baseNodes, ...processNodes]);
-  }, [simState.processes, baseNodes, positions, positionOverrides, processPositionOverrides, hiddenPids]);
 
   const onNodesChange = useCallback(
     (changes) => {
