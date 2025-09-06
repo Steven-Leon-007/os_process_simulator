@@ -12,6 +12,7 @@ import ProcessMenu from "./components/ProcessMenu";
 import { useProcessNodes } from "./hooks/useProcessNodes";
 import { useStateEdges } from "./hooks/useStateEdges";
 import { useStateNodes } from "./hooks/useStateNodes";
+import { useProcessTransition } from "./hooks/useProcessTransition";
 
 const nodeTypes = {
   stateNode: StateNode,
@@ -33,31 +34,15 @@ const StateDiagram = () => {
   const [menu, setMenu] = useState(null);
   const menuRef = useRef(null);
 
-  // --- estado para animaciones voladoras ---
-  const [flying, setFlying] = useState([]);
-  const flyingRef = useRef([]);
-  const [hiddenPids, setHiddenPids] = useState(new Set()); // pids ocultos durante animación
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("stateNodePositions");
-      if (saved) setPositionOverrides(JSON.parse(saved));
-
-      const savedProcessPositions = localStorage.getItem("processNodePositions");
-      if (savedProcessPositions) setProcessPositionOverrides(JSON.parse(savedProcessPositions));
-    } catch (e) {
-      console.warn("no se pudieron cargar posiciones guardadas", e);
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("stateNodePositions", JSON.stringify(positionOverrides));
-      localStorage.setItem("processNodePositions", JSON.stringify(processPositionOverrides));
-    } catch (e) {
-      console.warn("no se pudieron guardar posiciones", e);
-    }
-  }, [positionOverrides, processPositionOverrides]);
+  const { flying, hiddenPids } = useProcessTransition({
+    simState,
+    nodes,
+    positions,
+    positionOverrides,
+    STATE_COLORS,
+    setEdges,
+    animationDuration: 2000,
+  });
 
   useEffect(() => {
     const handleResize = () => {
@@ -75,6 +60,7 @@ const StateDiagram = () => {
         setMenu(null);
       }
     };
+    
     if (menu) {
       document.addEventListener("mousedown", handleClickOutside);
     }
@@ -95,7 +81,6 @@ const StateDiagram = () => {
     STATE_COLORS,
     setNodes,
   });
-  // --- Construcción de nodes: omitimos los procesos que están en 'hiddenPids' para que no aparezcan duplicados durante anim. ---
 
   const onNodesChange = useCallback(
     (changes) => {
@@ -185,119 +170,6 @@ const StateDiagram = () => {
     }
   };
 
-  // -------------------- DETECCIÓN DE TRANSICIONES Y ANIMACIÓN --------------------
-  const prevProcessesRef = useRef([]);
-  useEffect(() => {
-    const prev = prevProcessesRef.current || [];
-    const prevByPid = Object.fromEntries(prev.map(p => [p.pid.toString(), p]));
-    const nowByPid = Object.fromEntries(simState.processes.map(p => [p.pid.toString(), p]));
-
-    // Para cada PID en now, ver si cambió de estado
-    simState.processes.forEach((proc) => {
-      const pidStr = proc.pid.toString();
-      const prevProc = prevByPid[pidStr];
-      if (prevProc && prevProc.state !== proc.state) {
-        // Encontramos una transición: prevProc.state -> proc.state
-        const fromState = prevProc.state;
-        const toState = proc.state;
-
-        // Buscar nodo con id = pidStr en nodes para tomar su posición actual (si existe)
-        const currNode = nodes.find(n => n.id === pidStr && n.type === 'processNode');
-        const fromPos = currNode ? { x: currNode.position.x, y: currNode.position.y } : (positionOverrides[fromState] || positions[fromState]);
-
-        // Calcular posición destino (la misma lógica que usamos para componer nodes)
-        const grouped = {};
-        simState.processes.forEach((p) => {
-          const st = p.state;
-          if (!grouped[st]) grouped[st] = [];
-          grouped[st].push(p);
-        });
-        // posición destino base
-        const basePosTo = positionOverrides[toState] || positions[toState] || { x: 100, y: 100 };
-        const arrAtDest = grouped[toState] || [];
-        // vamos a colocar la animación apuntando a la próxima plaza (simple heurística)
-        const idxDest = arrAtDest.findIndex(p => p.pid.toString() === pidStr);
-        const perRowDest = (toState === "Terminated") ? 2 : 3;
-        const gapXDest = (toState === "Terminated") ? 60 : 42;
-        const gapY = 42;
-        const offsetXDest = (idxDest >= 0) ? (idxDest % perRowDest) * gapXDest : 0;
-        const offsetYDest = (idxDest >= 0) ? Math.floor(idxDest / perRowDest) * gapY + 70 : 70;
-
-        const toPos = { x: basePosTo.x + offsetXDest, y: basePosTo.y + offsetYDest };
-
-        // Lanzar la animación: ocultar el nodo real, crear overlay flying, pintar flecha destino
-        triggerProcessTransition(pidStr, fromState, toState, fromPos, toPos);
-      }
-    });
-
-    prevProcessesRef.current = simState.processes.map(p => ({ ...p }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [simState.processes, nodes, positions, positionOverrides, processPositionOverrides, edges]);
-
-  // función que orquesta la animación
-  const triggerProcessTransition = (pidStr, fromState, toState, fromPos, toPos) => {
-    const animationDuration = 2000; // ms
-    const arrowHighlightDuration = Math.round(animationDuration * 0.85);
-
-    // 1) ocultar nodo real
-    setHiddenPids(prev => {
-      const s = new Set(prev);
-      s.add(pidStr);
-      return s;
-    });
-
-    // 2) agregar flying overlay
-    const key = `${pidStr}-${Date.now()}`;
-    const newFlying = { pid: pidStr, from: fromPos, to: toPos, color: STATE_COLORS[toState] || '#999', key };
-    flyingRef.current = [...flyingRef.current, newFlying];
-    setFlying([...flyingRef.current]);
-
-    // 3) colorear la flecha (edge) que conecte fromState -> toState (si existe)
-    // guardamos estilo original para restaurar
-    setEdges(prevEdges => {
-      return prevEdges.map(e => {
-        if (e.source === fromState && e.target === toState) {
-          const original = e.style?.stroke || '#bbb';
-          // attach original to element for restore via custom property
-          return {
-            ...e,
-            __originalStroke: original,
-            style: { ...e.style, stroke: STATE_COLORS[toState], strokeWidth: 3 }
-          };
-        }
-        return e;
-      });
-    });
-
-    // 4) programar la restauración y la limpieza
-    setTimeout(() => {
-      // restaurar edge color
-      setEdges(prevEdges => prevEdges.map(e => {
-        if (e.source === fromState && e.target === toState) {
-          const orig = e.__originalStroke || '#bbb';
-          const copy = { ...e };
-          delete copy.__originalStroke;
-          return { ...copy, style: { ...copy.style, stroke: orig, strokeWidth: 2 } };
-        }
-        return e;
-      }));
-    }, arrowHighlightDuration);
-
-    // cuando termine la animación, limpiar overlay y mostrar nodo ya en su nuevo estado (simState ya cambia en el contexto)
-    setTimeout(() => {
-      // quitar flying
-      flyingRef.current = flyingRef.current.filter(f => f.key !== key);
-      setFlying([...flyingRef.current]);
-      // permitir que node aparezca (saldrá en su nuevo lugar porque simState cambió)
-      setHiddenPids(prev => {
-        const s = new Set(prev);
-        s.delete(pidStr);
-        return s;
-      });
-    }, animationDuration + 40);
-  };
-  // --------------------------------------------------------------------
-
   return (
     <div className="sd-container">
       <div
@@ -340,10 +212,8 @@ const StateDiagram = () => {
           ]}
         />
 
-        {/* Overlay de animaciones voladoras */}
         <FlyingOverlay flying={flying} />
 
-        {/* Menú contextual para procesos */}
         <ProcessMenu
           menu={menu}
           menuRef={menuRef}
