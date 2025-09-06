@@ -5,72 +5,11 @@ import { motion } from "framer-motion";
 import { STATES } from '../../services/fsm'
 import "./StateDiagram.css"
 import { useSim } from "../../context/SimulationContext";
-
-const getPositions = (width) => {
-  if (width < 768) {
-    return {
-      [STATES.NEW]: { x: 50, y: 30 },
-      [STATES.READY]: { x: 100, y: 150 },
-      [STATES.RUNNING]: { x: width - 215, y: 150 },
-      [STATES.WAITING]: { x: (width / 2) - 60, y: 300 },
-      [STATES.TERMINATED]: { x: width - 165, y: 30 },
-    };
-  }
-
-  return {
-    [STATES.NEW]: { x: 100, y: 50 },
-    [STATES.READY]: { x: 300, y: 150 },
-    [STATES.RUNNING]: { x: 600, y: 150 },
-    [STATES.WAITING]: { x: 450, y: 300 },
-    [STATES.TERMINATED]: { x: 800, y: 50 },
-  };
-};
-
-const STATE_COLORS = {
-  [STATES.NEW]: "#7dd3fc",
-  [STATES.READY]: "#60a5fa",
-  [STATES.RUNNING]: "#34d399",
-  [STATES.WAITING]: "#f59e0b",
-  [STATES.TERMINATED]: "#ef4444",
-};
-
-// ---------------------- nodos personalizados ----------------------
-const StateNode = ({ data }) => {
-  return (
-    <div
-      className="state-node"
-      style={{
-        backgroundColor: data.color,
-      }}
-    >
-      <Handle type="target" position={Position.Top} className="invisible-handle" id="target-top" />
-      <Handle type="source" position={Position.Top} className="invisible-handle" id="source-top" />
-      <Handle type="target" position={Position.Right} className="invisible-handle" id="target-right" />
-      <Handle type="source" position={Position.Right} className="invisible-handle" id="source-right" />
-      <Handle type="target" position={Position.Bottom} className="invisible-handle" id="target-bottom" />
-      <Handle type="source" position={Position.Bottom} className="invisible-handle" id="source-bottom" />
-      <Handle type="target" position={Position.Left} className="invisible-handle" id="target-left" />
-      <Handle type="source" position={Position.Left} className="invisible-handle" id="source-left" />
-      <div className="state-label">{data.label}</div>
-    </div>
-  );
-};
-
-// Process node envuelto en motion para fade-in cuando aparece (mount)
-const ProcessNode = ({ data }) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.35 }}
-      className="process-node"
-      style={{ borderColor: data.color }}
-    >
-      <div className="process-pid">P{data.pid}</div>
-      <div className="process-state">{data.state}</div>
-    </motion.div>
-  );
-};
+import StateNode from "./nodes/StateNode";
+import ProcessNode from "./nodes/ProcessNode";
+import { getActionsByState, getPositions, STATE_COLORS } from "./utils/constants";
+import FlyingOverlay from "./components/FlyingOverlay";
+import ProcessMenu from "./components/ProcessMenu";
 
 const nodeTypes = {
   stateNode: StateNode,
@@ -372,24 +311,7 @@ const StateDiagram = () => {
     [],
   );
 
-  // Organización de acciones por estado (igual que antes)
-  const ACTIONS_BY_STATE = {
-    [STATES.NEW]: [
-      { label: "Admitir", fn: (pid) => admit(pid), color: STATE_COLORS[STATES.READY] },
-    ],
-    [STATES.READY]: [
-      { label: "Asignar CPU", fn: (pid) => assignCPU(pid), color: STATE_COLORS[STATES.RUNNING] },
-    ],
-    [STATES.RUNNING]: [
-      { label: "Terminar", fn: (pid) => terminate(pid), color: STATE_COLORS[STATES.TERMINATED] },
-      { label: "Request I/O", fn: (pid) => requestIO(pid), color: STATE_COLORS[STATES.WAITING] },
-      { label: "Preempt", fn: (pid) => preempt(pid), color: STATE_COLORS[STATES.READY] },
-    ],
-    [STATES.WAITING]: [
-      { label: "I/O Complete", fn: (pid) => ioComplete(pid), color: STATE_COLORS[STATES.READY] },
-    ],
-    [STATES.TERMINATED]: [],
-  };
+  const ACTIONS_BY_STATE = getActionsByState(admit, assignCPU, terminate, requestIO, preempt, ioComplete, STATE_COLORS, STATES);
 
   const onNodeClick = useCallback((event, node) => {
     if (node.type === 'processNode') {
@@ -570,79 +492,16 @@ const StateDiagram = () => {
         />
 
         {/* Overlay de animaciones voladoras */}
-        <div className="flying-overlay" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1200 }}>
-          {flying.map(f => {
-            // convertimos coords (que usamos como posiciones relativas al reactflowWrapper)
-            const fromX = f.from.x;
-            const fromY = f.from.y;
-            const toX = f.to.x;
-            const toY = f.to.y;
-
-            return (
-              <motion.div
-                key={f.key}
-                className="flying-process"
-                initial={{ x: fromX, y: fromY, opacity: 1, scale: 1 }}
-                animate={{ x: toX, y: toY, opacity: 0 }}
-                transition={{ duration: 2, ease: "easeInOut" }}
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  width: '2rem',
-                  height: '2rem',
-                  borderRadius: 6,
-                  border: '2px solid #666',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: 'var(--color-secondary)',
-                  zIndex: 1300,
-                  boxShadow: '0 6px 16px rgba(0,0,0,0.12)',
-                }}
-              >
-                <div style={{ fontWeight: 700, fontSize: 11 }}>P{f.pid}</div>
-              </motion.div>
-            );
-          })}
-        </div>
+        <FlyingOverlay flying={flying} />
 
         {/* Menú contextual para procesos */}
-        {menu && (
-          <div
-            ref={menuRef}
-            className="process-menu"
-            style={{
-              left: menu.x,
-              top: menu.y,
-            }}
-          >
-            <div className="menu-title">P{menu.pid}</div>
-            <div className="menu-actions">
-              {(() => {
-                const proc = simState.processes.find(
-                  (p) => p.pid.toString() === menu.pid.toString()
-                );
-                if (!proc) return <div className="menu-empty">No encontrado</div>;
-                const actions = ACTIONS_BY_STATE[proc.state] || [];
-                if (actions.length === 0)
-                  return <div className="menu-empty">Sin acciones</div>;
-                return actions.map((a, i) => (
-                  <button
-                    key={i}
-                    className="menu-btn"
-                    onClick={() => handleAction(a)}
-                    style={{
-                      backgroundColor: a.color || "#999",
-                    }}
-                  >
-                    {a.label}
-                  </button>
-                ));
-              })()}
-            </div>
-          </div>
-        )}
+        <ProcessMenu
+          menu={menu}
+          menuRef={menuRef}
+          simState={simState}
+          ACTIONS_BY_STATE={ACTIONS_BY_STATE}
+          handleAction={handleAction}
+        />
       </div>
     </div>
   );
