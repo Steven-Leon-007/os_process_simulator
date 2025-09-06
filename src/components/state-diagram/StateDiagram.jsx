@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
-import { ReactFlow, Handle, Position, MarkerType, applyNodeChanges, applyEdgeChanges, addEdge } from '@xyflow/react';
+import { ReactFlow, Handle, Position, MarkerType, applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { motion } from "framer-motion";
 import { STATES } from '../../services/fsm'
 import "./StateDiagram.css"
 import { useSim } from "../../context/SimulationContext";
@@ -33,7 +34,7 @@ const STATE_COLORS = {
   [STATES.TERMINATED]: "#ef4444",
 };
 
-// Componente de nodo personalizado
+// ---------------------- nodos personalizados ----------------------
 const StateNode = ({ data }) => {
   return (
     <div
@@ -55,13 +56,19 @@ const StateNode = ({ data }) => {
   );
 };
 
-// Nodo que representa un proceso (rectángulo con PID y estado)
+// Process node envuelto en motion para fade-in cuando aparece (mount)
 const ProcessNode = ({ data }) => {
   return (
-    <div className="process-node" style={{ borderColor: data.color }}>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.35 }}
+      className="process-node"
+      style={{ borderColor: data.color }}
+    >
       <div className="process-pid">P{data.pid}</div>
       <div className="process-state">{data.state}</div>
-    </div>
+    </motion.div>
   );
 };
 
@@ -69,6 +76,7 @@ const nodeTypes = {
   stateNode: StateNode,
   processNode: ProcessNode,
 };
+// -----------------------------------------------------------------
 
 const StateDiagram = () => {
   const reactFlowWrapper = useRef(null);
@@ -77,13 +85,18 @@ const StateDiagram = () => {
   const [positionOverrides, setPositionOverrides] = useState({});
   const [processPositionOverrides, setProcessPositionOverrides] = useState({});
 
-  // nodos base (estados del sistema)
   const [baseNodes, setBaseNodes] = useState([]);
-  // nodos combinados (estados + procesos)
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
   const { state: simState, admit, assignCPU, terminate, preempt, requestIO, ioComplete } = useSim();
   const [menu, setMenu] = useState(null);
+  const menuRef = useRef(null);
+
+  // --- NUEVO: estado para animaciones voladoras ---
+  const [flying, setFlying] = useState([]); // array de { pid, from:{x,y}, to:{x,y}, color, key }
+  const flyingRef = useRef([]);
+  const [hiddenPids, setHiddenPids] = useState(new Set()); // pids ocultos durante animación
+  // ---------------------------------------------------
 
   useEffect(() => {
     try {
@@ -115,11 +128,27 @@ const StateDiagram = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenu(null);
+      }
+    };
+
+    if (menu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [menu]);
+
   useEffect(() => {
     const initialNodes = Object.entries(STATES).map(([key, value]) => ({
       id: value,
       type: "stateNode",
-      // si el usuario movió el nodo, usamos el override; si no, la posición por defecto
       position: positionOverrides[value] || positions[value],
       data: {
         label: value,
@@ -219,8 +248,8 @@ const StateDiagram = () => {
     setEdges(initialEdges);
   }, []);
 
+  // --- Construcción de nodes: omitimos los procesos que están en 'hiddenPids' para que no aparezcan duplicados durante anim. ---
   useEffect(() => {
-    // agrupar procesos por estado para posicionarlos en filas/columnas debajo del estado correspondiente
     const grouped = {};
     simState.processes.forEach((p) => {
       const st = p.state;
@@ -236,7 +265,9 @@ const StateDiagram = () => {
       arr.forEach((proc, idx) => {
         const pidStr = proc.pid.toString();
 
-        // Si ya tenemos una posición guardada para este proceso, la usamos
+        // si está animando lo omitimos (lo mostramos en overlay flying)
+        if (hiddenPids.has(pidStr)) return;
+
         if (processPositionOverrides[pidStr]) {
           processNodes.push({
             id: pidStr,
@@ -248,12 +279,11 @@ const StateDiagram = () => {
               index: idx,
               color: STATE_COLORS[proc.state] || '#999'
             },
-            draggable: true,
+            draggable: false,
           });
           return;
         }
 
-        // Si no hay posición guardada, calcularla basada en el estado
         const basePos = positionOverrides[stateName] || positions[stateName] || { x: 100, y: 100 };
         const perRow = perRowProcesses;
         const gapX = horizontalGap;
@@ -271,21 +301,19 @@ const StateDiagram = () => {
             index: idx,
             color: STATE_COLORS[proc.state] || '#999'
           },
-          draggable: true,
+          draggable: false,
         });
       });
     });
 
-    // los nodes totales son nodos base + procesos
     setNodes([...baseNodes, ...processNodes]);
-  }, [simState.processes, baseNodes, positions, positionOverrides, processPositionOverrides]);
+  }, [simState.processes, baseNodes, positions, positionOverrides, processPositionOverrides, hiddenPids]);
 
   const onNodesChange = useCallback(
     (changes) => {
       setNodes((ns) => {
         let updatedNodes = applyNodeChanges(changes, ns);
 
-        // Buscar cambios en nodos
         changes.forEach((change) => {
           if (change.type === "position" || change.type === "positioned") {
             const movedNode = ns.find((n) => n.id === change.id);
@@ -293,12 +321,10 @@ const StateDiagram = () => {
             if (movedNode?.type === "stateNode") {
               const stateName = movedNode.data.id;
 
-              // Buscar procesos de este estado que no tengan posición override
               updatedNodes = updatedNodes.map((node) => {
                 if (node.type === "processNode" &&
                   node.data.state === stateName &&
                   !processPositionOverrides[node.id]) {
-                  // reposicionar proceso relativo al nuevo basePos
                   const idx = parseInt(node.data.index, 10);
                   const gapX = stateName === "Terminated" ? 60 : 42;
                   const perRow = stateName === "Terminated" ? 2 : 3;
@@ -329,14 +355,11 @@ const StateDiagram = () => {
   const onNodeDragStop = useCallback((event, node) => {
     if (node.type === "stateNode") {
       const newPos = node.position;
-      // actualizar el override (para reconstrucciones futuras)
       setPositionOverrides(prev => ({ ...prev, [node.id]: newPos }));
-      // actualizar también baseNodes inmediato para evitar "parpadeos"
       setBaseNodes(prev =>
         prev.map(n => (n.id === node.id ? { ...n, position: newPos } : n))
       );
     } else if (node.type === "processNode") {
-      // Guardar la posición del proceso movido
       setProcessPositionOverrides(prev => ({
         ...prev,
         [node.id]: node.position
@@ -349,7 +372,7 @@ const StateDiagram = () => {
     [],
   );
 
-  // Acciones posibles por estado (mapea a funciones del contexto)
+  // Organización de acciones por estado (igual que antes)
   const ACTIONS_BY_STATE = {
     [STATES.NEW]: [
       { label: "Admitir", fn: (pid) => admit(pid), color: STATE_COLORS[STATES.READY] },
@@ -369,7 +392,6 @@ const StateDiagram = () => {
   };
 
   const onNodeClick = useCallback((event, node) => {
-    // solo abrimos menú para nodos de proceso
     if (node.type === 'processNode') {
       const bounds = reactFlowWrapper.current?.getBoundingClientRect();
       const x = event.clientX - (bounds?.left || 0);
@@ -392,15 +414,129 @@ const StateDiagram = () => {
     }
   };
 
+  // -------------------- DETECCIÓN DE TRANSICIONES Y ANIMACIÓN --------------------
+  const prevProcessesRef = useRef([]);
+  useEffect(() => {
+    const prev = prevProcessesRef.current || [];
+    const prevByPid = Object.fromEntries(prev.map(p => [p.pid.toString(), p]));
+    const nowByPid = Object.fromEntries(simState.processes.map(p => [p.pid.toString(), p]));
+
+    // Para cada PID en now, ver si cambió de estado
+    simState.processes.forEach((proc) => {
+      const pidStr = proc.pid.toString();
+      const prevProc = prevByPid[pidStr];
+      if (prevProc && prevProc.state !== proc.state) {
+        // Encontramos una transición: prevProc.state -> proc.state
+        const fromState = prevProc.state;
+        const toState = proc.state;
+
+        // Buscar nodo con id = pidStr en nodes para tomar su posición actual (si existe)
+        const currNode = nodes.find(n => n.id === pidStr && n.type === 'processNode');
+        const fromPos = currNode ? { x: currNode.position.x, y: currNode.position.y } : (positionOverrides[fromState] || positions[fromState]);
+
+        // Calcular posición destino (la misma lógica que usamos para componer nodes)
+        const grouped = {};
+        simState.processes.forEach((p) => {
+          const st = p.state;
+          if (!grouped[st]) grouped[st] = [];
+          grouped[st].push(p);
+        });
+        // posición destino base
+        const basePosTo = positionOverrides[toState] || positions[toState] || { x: 100, y: 100 };
+        const arrAtDest = grouped[toState] || [];
+        // vamos a colocar la animación apuntando a la próxima plaza (simple heurística)
+        const idxDest = arrAtDest.findIndex(p => p.pid.toString() === pidStr);
+        const perRowDest = (toState === "Terminated") ? 2 : 3;
+        const gapXDest = (toState === "Terminated") ? 60 : 42;
+        const gapY = 42;
+        const offsetXDest = (idxDest >= 0) ? (idxDest % perRowDest) * gapXDest : 0;
+        const offsetYDest = (idxDest >= 0) ? Math.floor(idxDest / perRowDest) * gapY + 70 : 70;
+
+        const toPos = { x: basePosTo.x + offsetXDest, y: basePosTo.y + offsetYDest };
+
+        // Lanzar la animación: ocultar el nodo real, crear overlay flying, pintar flecha destino
+        triggerProcessTransition(pidStr, fromState, toState, fromPos, toPos);
+      }
+    });
+
+    prevProcessesRef.current = simState.processes.map(p => ({ ...p }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simState.processes, nodes, positions, positionOverrides, processPositionOverrides, edges]);
+
+  // función que orquesta la animación
+  const triggerProcessTransition = (pidStr, fromState, toState, fromPos, toPos) => {
+    const animationDuration = 2000; // ms
+    const arrowHighlightDuration = Math.round(animationDuration * 0.85);
+
+    // 1) ocultar nodo real
+    setHiddenPids(prev => {
+      const s = new Set(prev);
+      s.add(pidStr);
+      return s;
+    });
+
+    // 2) agregar flying overlay
+    const key = `${pidStr}-${Date.now()}`;
+    const newFlying = { pid: pidStr, from: fromPos, to: toPos, color: STATE_COLORS[toState] || '#999', key };
+    flyingRef.current = [...flyingRef.current, newFlying];
+    setFlying([...flyingRef.current]);
+
+    // 3) colorear la flecha (edge) que conecte fromState -> toState (si existe)
+    // guardamos estilo original para restaurar
+    setEdges(prevEdges => {
+      return prevEdges.map(e => {
+        if (e.source === fromState && e.target === toState) {
+          const original = e.style?.stroke || '#bbb';
+          // attach original to element for restore via custom property
+          return {
+            ...e,
+            __originalStroke: original,
+            style: { ...e.style, stroke: STATE_COLORS[toState], strokeWidth: 3 }
+          };
+        }
+        return e;
+      });
+    });
+
+    // 4) programar la restauración y la limpieza
+    setTimeout(() => {
+      // restaurar edge color
+      setEdges(prevEdges => prevEdges.map(e => {
+        if (e.source === fromState && e.target === toState) {
+          const orig = e.__originalStroke || '#bbb';
+          const copy = { ...e };
+          delete copy.__originalStroke;
+          return { ...copy, style: { ...copy.style, stroke: orig, strokeWidth: 2 } };
+        }
+        return e;
+      }));
+    }, arrowHighlightDuration);
+
+    // cuando termine la animación, limpiar overlay y mostrar nodo ya en su nuevo estado (simState ya cambia en el contexto)
+    setTimeout(() => {
+      // quitar flying
+      flyingRef.current = flyingRef.current.filter(f => f.key !== key);
+      setFlying([...flyingRef.current]);
+      // permitir que node aparezca (saldrá en su nuevo lugar porque simState cambió)
+      setHiddenPids(prev => {
+        const s = new Set(prev);
+        s.delete(pidStr);
+        return s;
+      });
+    }, animationDuration + 40);
+  };
+  // --------------------------------------------------------------------
+
   return (
     <div className="sd-container">
       <div
         ref={reactFlowWrapper}
         style={{
           width: '100%',
-          height: '500px',
+          height: '550px',
           borderRadius: '8px',
-          position: 'relative'
+          position: 'relative',
+          overflow: 'hidden'
         }}
       >
         <ReactFlow
@@ -432,9 +568,49 @@ const StateDiagram = () => {
             [window.innerWidth, 500],
           ]}
         />
+
+        {/* Overlay de animaciones voladoras */}
+        <div className="flying-overlay" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1200 }}>
+          {flying.map(f => {
+            // convertimos coords (que usamos como posiciones relativas al reactflowWrapper)
+            const fromX = f.from.x;
+            const fromY = f.from.y;
+            const toX = f.to.x;
+            const toY = f.to.y;
+
+            return (
+              <motion.div
+                key={f.key}
+                className="flying-process"
+                initial={{ x: fromX, y: fromY, opacity: 1, scale: 1 }}
+                animate={{ x: toX, y: toY, opacity: 0 }}
+                transition={{ duration: 2, ease: "easeInOut" }}
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: '2rem',
+                  height: '2rem',
+                  borderRadius: 6,
+                  border: '2px solid #666',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'var(--color-secondary)',
+                  zIndex: 1300,
+                  boxShadow: '0 6px 16px rgba(0,0,0,0.12)',
+                }}
+              >
+                <div style={{ fontWeight: 700, fontSize: 11 }}>P{f.pid}</div>
+              </motion.div>
+            );
+          })}
+        </div>
+
         {/* Menú contextual para procesos */}
         {menu && (
           <div
+            ref={menuRef}
             className="process-menu"
             style={{
               left: menu.x,
@@ -444,14 +620,24 @@ const StateDiagram = () => {
             <div className="menu-title">P{menu.pid}</div>
             <div className="menu-actions">
               {(() => {
-                const proc = simState.processes.find(p => p.pid.toString() === menu.pid.toString());
+                const proc = simState.processes.find(
+                  (p) => p.pid.toString() === menu.pid.toString()
+                );
                 if (!proc) return <div className="menu-empty">No encontrado</div>;
                 const actions = ACTIONS_BY_STATE[proc.state] || [];
-                if (actions.length === 0) return <div className="menu-empty">Sin acciones</div>;
+                if (actions.length === 0)
+                  return <div className="menu-empty">Sin acciones</div>;
                 return actions.map((a, i) => (
-                  <button key={i} className={`menu-btn`} onClick={() => handleAction(a)} style={{
-                    backgroundColor: a.color || "#999",
-                  }}>{a.label}</button>
+                  <button
+                    key={i}
+                    className="menu-btn"
+                    onClick={() => handleAction(a)}
+                    style={{
+                      backgroundColor: a.color || "#999",
+                    }}
+                  >
+                    {a.label}
+                  </button>
                 ));
               })()}
             </div>
