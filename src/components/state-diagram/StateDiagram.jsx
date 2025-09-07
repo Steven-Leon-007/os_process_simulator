@@ -23,7 +23,7 @@ const nodeTypes = {
 const StateDiagram = () => {
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
-  const [positions, setPositions] = useState(getPositions(window.innerWidth));
+  const [positions, setPositions] = useState(getPositions(800));
   const [positionOverrides, setPositionOverrides] = useState({});
   const [processPositionOverrides, setProcessPositionOverrides] = useState({});
 
@@ -45,14 +45,24 @@ const StateDiagram = () => {
   });
 
   useEffect(() => {
-    const handleResize = () => {
-      setPositions(getPositions(window.innerWidth));
+    const updatePositions = () => {
+      if (reactFlowWrapper.current) {
+        const width = reactFlowWrapper.current.offsetWidth;
+        setPositions(getPositions(width));
+      }
     };
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+    updatePositions();
 
+    const resizeObserver = new window.ResizeObserver(updatePositions);
+    if (reactFlowWrapper.current) {
+      resizeObserver.observe(reactFlowWrapper.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [reactFlowWrapper]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -60,7 +70,7 @@ const StateDiagram = () => {
         setMenu(null);
       }
     };
-    
+
     if (menu) {
       document.addEventListener("mousedown", handleClickOutside);
     }
@@ -176,7 +186,7 @@ const StateDiagram = () => {
         ref={reactFlowWrapper}
         style={{
           width: '100%',
-          height: '550px',
+          height: '500px',
           borderRadius: '8px',
           position: 'relative',
           overflow: 'hidden'
@@ -188,14 +198,13 @@ const StateDiagram = () => {
           nodeTypes={nodeTypes}
           onInit={(instance) => {
             setReactFlowInstance(instance);
-            instance.setCenter(window.innerWidth / 2, 200, { zoom: 1, duration: 0 });
           }}
           nodesDraggable={true}
           nodesConnectable={false}
           elementsSelectable={true}
           panOnScroll={false}
           panOnDrag={false}
-          translateExtent={[[0, 0], [window.innerWidth, 500]]}
+          translateExtent={[[0, 0], [reactFlowWrapper.current?.offsetWidth || 800, 500]]}
           zoomOnScroll={false}
           zoomOnPinch={false}
           zoomOnDoubleClick={false}
@@ -208,7 +217,7 @@ const StateDiagram = () => {
           onNodeClick={onNodeClick}
           nodeExtent={[
             [0, 0],
-            [window.innerWidth, 500],
+            [reactFlowWrapper.current?.offsetWidth || 800, 500],
           ]}
         />
 

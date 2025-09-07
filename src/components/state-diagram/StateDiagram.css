@@ -1,6 +1,12 @@
 .sd-container {
-  width: 100%;
+  width: 80%;
   height: 500px;
+}
+
+@media screen and (max-width: 768px) {
+  .sd-container {
+    width: 100%;
+  }
 }
 
 .state-node {
@@ -117,4 +123,3 @@
   color: #111;
   background: var(--color-secondary);
 }
-
