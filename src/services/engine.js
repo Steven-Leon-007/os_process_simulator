@@ -1,6 +1,6 @@
 /**
  * Motor de simulación para auto-transición de procesos.
- * Soporta modos: manual-only, semi-auto, full-auto.
+ * Soporta modos: manual-only, full-auto.
  * Permite pausar, cambiar velocidad y respeta reglas válidas de transición.
  */
 import {
@@ -14,11 +14,14 @@ import {
 } from "./fsm.js";
 
 // Estado interno del motor
-let mode = "manual"; // 'manual', 'semi-auto', 'auto'
-let speed = 1000; // ms entre transiciones (0 = pausa)
+let mode = "manual"; // 'manual', 'auto'
+let speed = 3000; // ms entre transiciones (0 = pausa)
 let timer = null;
 let onUpdate = null; // callback para notificar cambios
 let processes = [];
+
+// Mapa para temporizadores de inactividad por proceso
+let inactivityTimers = {};
 
 /**
  * Configura el callback para notificar cambios en los procesos.
@@ -30,12 +33,17 @@ export function setUpdateCallback(cb) {
 
 /**
  * Configura el modo del motor.
- * @param {'manual'|'semi-auto'|'auto'} newMode
+ * @param {'manual'|'auto'} newMode
  */
 export function setMode(newMode) {
   mode = newMode;
   if (timer) stop();
-  if (mode !== "manual" && speed > 0) start();
+  if (mode === "auto" && speed > 0) start();
+  // Limpiar temporizadores de inactividad si no es manual
+  if (mode !== "manual") {
+    Object.values(inactivityTimers).forEach(clearTimeout);
+    inactivityTimers = {};
+  }
 }
 
 /**
@@ -46,7 +54,7 @@ export function setSpeed(newSpeed) {
   speed = newSpeed;
   if (timer) {
     stop();
-    if (speed > 0 && mode !== "manual") start();
+    if (speed > 0 && mode === "auto") start();
   }
 }
 
@@ -85,10 +93,11 @@ export function stop() {
  * Aplica transiciones automáticas válidas.
  */
 export function step() {
+
   if (!processes || processes.length === 0) return;
   let updated = false;
 
-  // Mapas de transiciones automáticas
+  // Transiciones automáticas
   const AUTO_TRANSITIONS = {
     [STATES.NEW]: (proc) => admit(proc, "auto"),
     [STATES.READY]: (proc) => assignCPU(proc, "auto"),
@@ -97,26 +106,49 @@ export function step() {
     [STATES.WAITING]: (proc) => ioComplete(proc, "auto"),
   };
 
-  const SEMI_AUTO_TRANSITIONS = {
-    [STATES.NEW]: (proc) => admit(proc, "semi-auto"),
-    [STATES.READY]: (proc) => assignCPU(proc, "semi-auto"),
-    // Otros estados requieren intervención manual
-  };
-
   processes.forEach((proc) => {
     if (mode === "auto" && AUTO_TRANSITIONS[proc.state]) {
       AUTO_TRANSITIONS[proc.state](proc);
       updated = true;
-    } else if (mode === "semi-auto" && SEMI_AUTO_TRANSITIONS[proc.state]) {
-      SEMI_AUTO_TRANSITIONS[proc.state](proc);
-      updated = true;
     }
-    // Modo manual: solo avanza si se llama manualmente
+    // En modo manual, no avanza automáticamente aquí
   });
   if (updated && typeof onUpdate === "function") {
-    onUpdate(processes);
+    // Enviar copia profunda para forzar re-render en React
+    const cloned = processes.map(p => ({ ...p }));
+    onUpdate(cloned);
   }
 }
+
+// Lógica para avance por inactividad en modo manual
+function setProcessActivity(proc) {
+  if (mode !== "manual") return;
+  // Reinicia el temporizador de inactividad para este proceso
+  if (inactivityTimers[proc.pid]) {
+    clearTimeout(inactivityTimers[proc.pid]);
+  }
+  inactivityTimers[proc.pid] = setTimeout(() => {
+    // Solo avanza si sigue en modo manual y el proceso sigue en el mismo estado
+    if (mode === "manual") {
+      // Solo avanza si hay transición automática posible
+      const AUTO_TRANSITIONS = {
+        [STATES.NEW]: (p) => admit(p, "manual-inactivity"),
+        [STATES.READY]: (p) => assignCPU(p, "manual-inactivity"),
+        [STATES.RUNNING]: (p) => terminate(p, "manual-inactivity"),
+        [STATES.WAITING]: (p) => ioComplete(p, "manual-inactivity"),
+      };
+        if (AUTO_TRANSITIONS[proc.state]) {
+          AUTO_TRANSITIONS[proc.state](proc);
+          if (typeof onUpdate === "function") {
+            const cloned = processes.map(p => ({ ...p }));
+            onUpdate(cloned);
+          }
+        }
+    }
+  }, 10000); // 10 segundos
+}
+
+// Debes llamar a setProcessActivity(proc) cada vez que el usuario interactúe con el proceso manualmente
 
 /**
  * Actualiza la lista de procesos (ej: si cambia desde el contexto)
@@ -124,6 +156,10 @@ export function step() {
  */
 export function setProcesses(procList) {
   processes = procList;
+  // Reiniciar temporizadores de inactividad si estamos en modo manual
+  if (mode === "manual") {
+    processes.forEach(proc => setProcessActivity(proc));
+  }
 }
 
 /**
@@ -135,6 +171,8 @@ export function resetEngine() {
   onUpdate = null;
   mode = "manual";
   speed = 1000;
+  Object.values(inactivityTimers).forEach(clearTimeout);
+  inactivityTimers = {};
 }
 
 // Exporta el estado actual del motor
