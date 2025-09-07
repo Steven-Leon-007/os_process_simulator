@@ -1,8 +1,10 @@
+
 import React, { useState } from 'react';
 import { useSim } from '../../context/SimulationContext';
 
 const SPEEDS = [6000, 3000, 1666, 1500]; // ms para x0.5, x1.0, x1.5, x2.0
 const SPEED_LABELS = ['x0.5', 'x1.0', 'x1.5', 'x2.0'];
+
 
 const ControlBar = () => {
   const { create, speed, setSpeed, mode, setMode, state } = useSim();
@@ -68,6 +70,7 @@ const ControlBar = () => {
       <button className="button" onClick={() => downloadCSV(state.processes)}>
         Descargar CSV
       </button>
+
     </div>
   );
 };
