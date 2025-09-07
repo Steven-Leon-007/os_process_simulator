@@ -1,10 +1,15 @@
 .header {
     display: flex;
-    flex-direction: column;
     width: 100%;
     gap: 0.5rem;
-    padding-top: 8px;
-    margin-bottom: 1rem;
+    background-color: var(--color-secondary);
+    justify-content: space-around;
+    align-items: center;
+}
+
+.header .title{
+    padding: 0.5rem 0;
+    margin-left: 1rem;
 }
 
 .main-wrapper {
@@ -13,7 +18,7 @@
     gap: 1rem;
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 1100px) {
     .main-wrapper {
         flex-direction: column;
     }
