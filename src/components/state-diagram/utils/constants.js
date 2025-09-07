@@ -1,7 +1,11 @@
 import { admit, assignCPU, ioComplete, preempt, requestIO, STATES, terminate } from "../../../services/fsm";
 
 export const getPositions = (width) => {
-    if (width < 768) {
+
+    const margin = 20;
+    const usableWidth = width - margin * 2;
+
+    if (width < 800) {
         return {
             [STATES.NEW]: { x: 50, y: 30 },
             [STATES.READY]: { x: 100, y: 150 },
@@ -11,12 +15,13 @@ export const getPositions = (width) => {
         };
     }
 
+
     return {
-        [STATES.NEW]: { x: 100, y: 50 },
-        [STATES.READY]: { x: 300, y: 150 },
-        [STATES.RUNNING]: { x: 600, y: 150 },
-        [STATES.WAITING]: { x: 450, y: 300 },
-        [STATES.TERMINATED]: { x: 800, y: 50 },
+        [STATES.NEW]: { x: margin, y: 50 },
+        [STATES.READY]: { x: margin + usableWidth * 0.15, y: 150 },
+        [STATES.RUNNING]: { x: margin + usableWidth * 0.42, y: 150 },
+        [STATES.WAITING]: { x: margin + usableWidth * 0.28, y: 300 },
+        [STATES.TERMINATED]: { x: margin + usableWidth * 0.82, y: 50 },
     };
 };
 

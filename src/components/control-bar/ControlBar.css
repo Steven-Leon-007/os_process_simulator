@@ -1,0 +1,13 @@
+.create-button {
+    background-color: var(--color-decoration);
+    border: none;
+    width: 50%;
+    height: 2rem;
+    border-radius: 8px;
+    transition: background-color 0.3s ease-in-out;
+}
+
+.create-button:hover {
+    background-color: var(--color-decoration-hover);
+    cursor: pointer;
+}
