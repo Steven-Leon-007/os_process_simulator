@@ -23,22 +23,12 @@ describe("Motor de simulación (engine.js)", () => {
     engine.setMode("auto");
     engine.setSpeed(10);
     engine.start(procesos);
-    // Espera suficiente tiempo para que avance
-    await new Promise(res => setTimeout(res, 100));
-    // Debe haber cambiado de estado
+    await new Promise(res => setTimeout(res, 100)); // Espera 100ms
     expect([STATES.READY, STATES.RUNNING, STATES.WAITING, STATES.TERMINATED]).toContain(procesos[0].state);
     engine.pause();
-  });
+  }, 1000); // Timeout corto
 
-  test("Modo semi-auto: solo avanza NEW→READY y READY→RUNNING", async () => {
-    engine.setMode("semi-auto");
-    engine.setSpeed(10);
-    engine.start(procesos);
-    await new Promise(res => setTimeout(res, 50));
-    // Debe estar en RUNNING pero no más allá
-    expect([STATES.READY, STATES.RUNNING]).toContain(procesos[0].state);
-    engine.pause();
-  });
+  // Test de modo semi-auto eliminado, ya no existe ese modo
 
   test("Cambio de modo en tiempo real", async () => {
     engine.setMode("manual");

@@ -48,7 +48,7 @@ const VALID_TRANSITIONS = {
  * @param {number} [priority=0] Prioridad del proceso (0-9)
  * @returns Un objeto que representa el proceso
  */
-export function createProcess(pid, priority = 0) {
+export function createProcess(pid, priority) {
   const now = getTimestamp();
   return {
     pid,
@@ -87,13 +87,35 @@ function transition(process, toState, cause = "manual") {
   }
 
   const now = getTimestamp();
-
-  // Actualizar historial
+// Simulación de cambios en registros y syscalls
+  // Ejemplo: cada vez que se asigna CPU, pc aumenta y se modifica un registro
+  if (toState === STATES.RUNNING) {
+    process.pc += 1;
+    process.cpuRegisters["AX"] = (process.cpuRegisters["AX"] || 0) + 10;
+    process.syscalls.push({ type: "CPU_ASSIGN", at: now });
+  }
+  if (toState === STATES.WAITING) {
+    process.cpuRegisters["IO_WAIT"] = now;
+    process.syscalls.push({ type: "IO_REQUEST", at: now });
+  }
+  if (toState === STATES.READY && fromState === STATES.WAITING) {
+    process.cpuRegisters["IO_DONE"] = now;
+    process.syscalls.push({ type: "IO_COMPLETE", at: now });
+  }
+  if (toState === STATES.TERMINATED) {
+    process.cpuRegisters["END"] = now;
+    process.syscalls.push({ type: "TERMINATE", at: now });
+  }
+  // Actualizar historial, guardando el estado actual de pc, cpuRegisters y syscalls
   process.history.push({
     from: fromState,
     to: toState,
     timestamp: now,
     cause,
+    pc: process.pc,
+    cpuRegisters: JSON.parse(JSON.stringify(process.cpuRegisters)),
+    syscalls: JSON.parse(JSON.stringify(process.syscalls)),
+    priority: process.priority
   });
 
   // Cambiar estado

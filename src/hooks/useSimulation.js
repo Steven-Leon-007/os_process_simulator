@@ -32,8 +32,9 @@ export default function useSimulation() {
     const [state, dispatch] = useReducer(reducer, initialState)
 
 
-    const create = useCallback((priority = 0) => {
-        dispatch({ type: 'CREATE', priority })
+    const create = useCallback((priority) => {
+        const realPriority = (typeof priority === 'number') ? priority : (1 + Math.floor(Math.random() * 9));
+        dispatch({ type: 'CREATE', priority: realPriority })
     }, [])
 
 
