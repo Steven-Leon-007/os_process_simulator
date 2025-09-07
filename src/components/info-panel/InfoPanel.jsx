@@ -1,11 +1,11 @@
 import React from 'react'
 import { useSim } from '../../context/SimulationContext'
 import { formatTimestamp } from '../../utils/time'
-
+import './InfoPanel.css'
 const InfoPanel = () => {
   const { state } = useSim()
   return (
-    <div>
+    <div className='info-panel'>
       <h3>Procesos ({state.processes.length})</h3>
       {state.processes.map(p => (
         <div key={p.pid} className="process-card">

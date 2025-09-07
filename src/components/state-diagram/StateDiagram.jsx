@@ -23,7 +23,7 @@ const nodeTypes = {
 const StateDiagram = () => {
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
-  const [positions, setPositions] = useState(getPositions(800));
+  const [positions, setPositions] = useState(getPositions(window.innerWidth));
   const [positionOverrides, setPositionOverrides] = useState({});
   const [processPositionOverrides, setProcessPositionOverrides] = useState({});
 
@@ -45,24 +45,14 @@ const StateDiagram = () => {
   });
 
   useEffect(() => {
-    const updatePositions = () => {
-      if (reactFlowWrapper.current) {
-        const width = reactFlowWrapper.current.offsetWidth;
-        setPositions(getPositions(width));
-      }
+    const handleResize = () => {
+      setPositions(getPositions(window.innerWidth));
     };
 
-    updatePositions();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
-    const resizeObserver = new window.ResizeObserver(updatePositions);
-    if (reactFlowWrapper.current) {
-      resizeObserver.observe(reactFlowWrapper.current);
-    }
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [reactFlowWrapper]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -204,11 +194,11 @@ const StateDiagram = () => {
           elementsSelectable={true}
           panOnScroll={false}
           panOnDrag={false}
-          translateExtent={[[0, 0], [reactFlowWrapper.current?.offsetWidth || 800, 500]]}
+          translateExtent={[[0, 0], [window.innerWidth * 0.8, 500]]}
           zoomOnScroll={false}
           zoomOnPinch={false}
           zoomOnDoubleClick={false}
-          preventScrolling={true}
+          preventScrolling={false}
           minZoom={1}
           maxZoom={1}
           onNodesChange={onNodesChange}
@@ -217,7 +207,7 @@ const StateDiagram = () => {
           onNodeClick={onNodeClick}
           nodeExtent={[
             [0, 0],
-            [reactFlowWrapper.current?.offsetWidth || 800, 500],
+            [window.innerWidth * 0.8, 500],
           ]}
         />
 

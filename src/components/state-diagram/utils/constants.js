@@ -1,27 +1,23 @@
 import { admit, assignCPU, ioComplete, preempt, requestIO, STATES, terminate } from "../../../services/fsm";
 
 export const getPositions = (width) => {
-
-    const margin = 20;
-    const usableWidth = width - margin * 2;
-
-    if (width < 800) {
+    const finalWidth = width * 0.8; // Limitar ancho máximo para mejor visualización
+    if (width < 1100) {
         return {
             [STATES.NEW]: { x: 50, y: 30 },
-            [STATES.READY]: { x: 100, y: 150 },
-            [STATES.RUNNING]: { x: width - 215, y: 150 },
-            [STATES.WAITING]: { x: (width / 2) - 60, y: 300 },
-            [STATES.TERMINATED]: { x: width - 165, y: 30 },
+            [STATES.READY]: { x: 70, y: 150 },
+            [STATES.RUNNING]: { x: finalWidth - 185, y: 150 },
+            [STATES.WAITING]: { x: (finalWidth / 2) - 60, y: 300 },
+            [STATES.TERMINATED]: { x: finalWidth - 165, y: 30 },
         };
     }
 
-
     return {
-        [STATES.NEW]: { x: margin, y: 50 },
-        [STATES.READY]: { x: margin + usableWidth * 0.15, y: 150 },
-        [STATES.RUNNING]: { x: margin + usableWidth * 0.42, y: 150 },
-        [STATES.WAITING]: { x: margin + usableWidth * 0.28, y: 300 },
-        [STATES.TERMINATED]: { x: margin + usableWidth * 0.82, y: 50 },
+        [STATES.NEW]: { x: finalWidth * 0.05, y: 50 },
+        [STATES.READY]: { x: finalWidth * 0.2, y: 150 },
+        [STATES.RUNNING]: { x: finalWidth * 0.6, y: 150 },
+        [STATES.WAITING]: { x: finalWidth * 0.4, y: 300 },
+        [STATES.TERMINATED]: { x: finalWidth * 0.8, y: 50 },
     };
 };
 

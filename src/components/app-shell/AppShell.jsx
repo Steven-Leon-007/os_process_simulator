@@ -8,14 +8,16 @@ const AppShell = () => {
   return (
     <div className="app-shell">
       <div className="header">
-        <div><strong>OS Simulator - By Nata, Steven and Mileth</strong></div>
+        <div className='title'><strong>OS Simulator - By Nata, Steven and Mileth</strong></div>
+        <div className="toggle-container">
+          <input type="checkbox" name="details" id="details" />
+          <span>Mostrar detalles técnicos</span>
+        </div>
       </div>
       <div className="main-wrapper">
         <StateDiagram />
         <ControlBar />
       </div>
-
-      <div className="info"><InfoPanel /></div>
     </div>
   )
 }
