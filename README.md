@@ -21,10 +21,10 @@ Antes de instalar la aplicación, asegúrate de tener:
     cd carpeta-raiz-proyecto
 
 # 3. Instala las dependencias
-npm install
+    npm install
 
 # 4. Inicia servidor de desarrollo
-npm run dev
+    npm run dev
 
 # El proyecto quedará disponible en http://localhost:5173
 
@@ -42,12 +42,12 @@ npm run dev
 ## Guía de Uso
 
 **Crear un proceso**  
-Clic en **Crear**. El proceso aparece en estado _New_. Si esta en modo automático, se crearán procesos nuevos aleatorios cada 7 segundos
+Clic en **Crear**. Se crea un proceso con prioridad aleatoria y aparece en estado _New_. Si esta en modo automático, se crearán procesos nuevos aleatorios cada 7 segundos.
 
 **Modo Manual / Automático**  
 Usa el interruptor:
 
-- _Manual_: cada transición se realiza con los botones.
+- _Manual_: cada transición se realiza con los botones, si el sistema no detecta actividad por parte del usuario después de 45 segundos se cambia a estado automático.
 - _Automático_: el motor avanza según tiempos predefinidos.
 
 **Control de velocidad**  
@@ -62,51 +62,50 @@ Ajusta el deslizador para cambiar la frecuencia de avance en modo automático.
 - Terminar (Running → Terminated)
 
 **Exportar historial**  
-Clic en **Descargar CSV** para descargar el historial de transiciones de cada proceso.
+Clic en **Exportar CSV** para descargar el historial de transiciones de cada proceso.
 
 ## Interfaz de Usuario
 
-- **Barra de Controles:** Crear procesos, alternar modo, ajustar velocidad, exportar historial, pausar o reanudar.
+- **Barra de Controles:** Crear procesos, alternar modo, ajustar velocidad, exportar historial y pausar.
 - **Diagrama de Estados:** Vista gráfica de los procesos ubicados en su estado actual.
-- **Panel de Detalles:** Información del proceso seleccionado:
-  - PID
-  - Estado actual
-  - Historial de transiciones (from, to, timestamp, cause, duration)
+- **Panel de detalles:** El simulador incluye opciones de visualización y sonido que puedes activar o desactivar desde la parte superior de la interfaz:
+
+  - **Mostrar detalles técnicos:**  
+    Permite alternar entre dos modos de información para cada proceso.
+
+    - **Cuando la casilla está desactivada (modo simplificado):**
+
+      - PID
+      - Estado actual
+      - Tiempo transcurrido en el estado
+      - Barra de progreso visual (opcional)
+
+    - **Cuando la casilla está activada (modo técnico):**
+      - PID
+      - Estado actual
+      - Prioridad
+      - Contador de programa (PC)
+      - Registros de CPU
+      - Número de llamadas al sistema (Syscalls)
+      - Tiempo exacto en el estado actual
+      - Historial de transiciones (estado de origen, estado de destino, marca de tiempo, causa y duración en cada estado)
+
+  - **Efectos de sonido:**  
+    Activa o desactiva los sonidos asociados a los eventos del simulador  
+    (por ejemplo: creación de un proceso, cambio de estado, finalización).
 
 ## Modos de Operación
-
-| Estado  | Tiempo (ms) |
-| ------- | ----------- |
-| New     | 1000        |
-| Ready   | 0           |
-| Running | 3000        |
-| Waiting | 2000        |
 
 - _Manual_: el usuario controla cada transición.
 - _Automático_: el motor evalúa elapsed y avanza cuando se cumple el tiempo mínimo.
 
-El scheduler asigna CPU al proceso con mayor prioridad en Ready.
-
-## 🔧 Configuración Avanzada
-
-Puedes ajustar los tiempos en `src/services/engine.js`:
-
-```js
-const DURATIONS = {
-  New: 1000, // 1 segundo en estado New
-  Ready: 0,
-  Running: 3000, // quantum de CPU
-  Waiting: 2000, // espera por I/O
-};
-```
-
 ## Ejemplo de Flujo
 
-1. Crear 3 procesos con prioridades 2, 5 y 8.
-2. Activar Modo Automático y velocidad normal.
-3. Observar cómo el proceso de prioridad 8 pasa a Running primero.
-4. Esperar a que terminen o pidan I/O según el quantum.
-5. Descargar historial en CSV.
+1. Crear tres procesos desde el botón **Nuevo Proceso**.
+2. Activar el **Modo Automático** y seleccionar una velocidad normal.
+3. Observar cómo el proceso con **prioridad 8** es asignado a **Running** antes que los demás.
+4. Esperar a que los procesos finalicen o soliciten I/O según el quantum configurado.
+5. Descargar el historial de la simulación en formato **CSV** para su análisis.
 
 ## Solución de Problemas
 
