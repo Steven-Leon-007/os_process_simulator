@@ -1,9 +1,5 @@
-
-
 /**
  * Esquema plano de un proceso.
- * Úsalo como referencia de estructura en la app
- * (sin dependencia de Mongoose ni de ninguna BD).
  */
 export const processSchema = {
   pid: {

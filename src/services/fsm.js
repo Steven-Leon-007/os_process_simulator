@@ -51,11 +51,11 @@ const VALID_TRANSITIONS = {
 export function createProcess(pid, priority) {
   const now = getTimestamp();
   return {
-    pid,
+    pid: pid,
     state: STATES.NEW,
     createdAt: now,
     stateEnteredAt: now,
-    priority,
+    priority: priority ?? 0,
     pc: 0,
     cpuRegisters: {},
     syscalls: [],
@@ -87,7 +87,7 @@ function transition(process, toState, cause = "manual") {
   }
 
   const now = getTimestamp();
-// Simulación de cambios en registros y syscalls
+  // Simulación de cambios en registros y syscalls
   // Ejemplo: cada vez que se asigna CPU, pc aumenta y se modifica un registro
   if (toState === STATES.RUNNING) {
     process.pc += 1;
@@ -115,7 +115,7 @@ function transition(process, toState, cause = "manual") {
     pc: process.pc,
     cpuRegisters: JSON.parse(JSON.stringify(process.cpuRegisters)),
     syscalls: JSON.parse(JSON.stringify(process.syscalls)),
-    priority: process.priority
+    priority: process.priority,
   });
 
   // Cambiar estado
