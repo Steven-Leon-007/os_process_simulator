@@ -4,6 +4,7 @@ import ControlBar from "../control-bar/ControlBar";
 import "./AppShell.css";
 import { useSound } from '../../context/SoundContext';
 import { setManualInactivityTimeout } from '../../services/engine';
+import { useSim } from "../../context/SimulationContext";
 
 const INACTIVITY_MIN = 0;
 const INACTIVITY_MAX = 300;
@@ -13,6 +14,7 @@ const INACTIVITY_DEFAULT = 45;
 const AppShell = () => {
   const { soundEnabled, setSoundEnabled } = useSound();
   const [showDetails, setShowDetails] = useState(false);
+  const { reset } = useSim();
 
   const [inactivity, setInactivity] = useState(INACTIVITY_DEFAULT);
 
@@ -52,21 +54,26 @@ const AppShell = () => {
         <StateDiagram showDetails={showDetails} />
         <ControlBar />
       </div>
-      <label className="inactivity-slider">
-        <span>Inactividad para automático:</span>
-        <input
-          type="range"
-          min={INACTIVITY_MIN}
-          max={INACTIVITY_MAX}
-          step={INACTIVITY_STEP}
-          value={inactivity}
-          onChange={handleInactivityChange}
-          style={{ flex: 1, margin: "0 8px" }}
-        />
-        <span style={{ minWidth: 60 }}>
-          {inactivity === 0 ? "Desactivado" : `${inactivity} s`}
-        </span>
-      </label>
+      <div className="footer-options">
+        <label className="inactivity-slider">
+          <span>Inactividad para automático:</span>
+          <input
+            type="range"
+            min={INACTIVITY_MIN}
+            max={INACTIVITY_MAX}
+            step={INACTIVITY_STEP}
+            value={inactivity}
+            onChange={handleInactivityChange}
+            style={{ flex: 1, margin: "0 8px" }}
+          />
+          <span style={{ minWidth: 60 }}>
+            {inactivity === 0 ? "Desactivado" : `${inactivity} s`}
+          </span>
+        </label>
+        <button className="button clear" onClick={reset}>
+          Limpiar procesos
+        </button>
+      </div>
     </div>
   );
 };
