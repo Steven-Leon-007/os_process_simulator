@@ -3,6 +3,9 @@ import React, { useState } from 'react';
 import { useSim } from '../../context/SimulationContext';
 import './ControlBar.css';
 import InfoPanel from '../info-panel/InfoPanel';
+import useAudio from '../../hooks/useAudio';
+import createProcessSfx from '../../assets/effects/create_process.mp3';
+import { useSound } from '../../context/SoundContext';
 
 const SPEEDS = [6000, 3000, 1666, 1500]; // ms para x0.5, x1.0, x1.5, x2.0
 const SPEED_LABELS = ['x0.5', 'x1.0', 'x1.5', 'x2.0'];
@@ -11,6 +14,13 @@ const SPEED_LABELS = ['x0.5', 'x1.0', 'x1.5', 'x2.0'];
 const ControlBar = () => {
   const { create, speed, setSpeed, mode, setMode, state, pause } = useSim();
   const [showSlider, setShowSlider] = useState(false);
+  const { soundEnabled } = useSound();
+  const playCreate = useAudio(createProcessSfx, soundEnabled);
+
+  const handleCreate = () => {
+    create(0);
+    playCreate();
+  };
 
   const handleManual = () => {
     setMode && setMode('manual');
@@ -57,7 +67,7 @@ const ControlBar = () => {
     <div className='control-bar'>
       <div className="buttons">
         <div className="upper-buttons">
-          <button className="button create-button" onClick={() => create(0)}>Crear</button>
+          <button className="button create-button" onClick={handleCreate}>Crear</button>
           <button className="button export" onClick={() => downloadCSV(state.processes)}>
             Exportar CSV
           </button>

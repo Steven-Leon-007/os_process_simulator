@@ -3,11 +3,14 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { SimulationProvider } from './context/SimulationContext.jsx'
+import { SoundProvider } from './context/SoundContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <SimulationProvider>
-      <App />
+      <SoundProvider>
+        <App />
+      </SoundProvider>
     </SimulationProvider>
   </StrictMode>,
 )
