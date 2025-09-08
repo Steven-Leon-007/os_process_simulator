@@ -1,4 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import useAudio from '../../../hooks/useAudio';
+import newReadySfx from '../../../assets/effects/new_ready.mp3';
+import readyRunningSfx from '../../../assets/effects/ready_running.mp3';
+import runningTerminatedSfx from '../../../assets/effects/running_terminated.mp3';
+import runningWaitingSfx from '../../../assets/effects/running_waiting.mp3';
+import waitingReadySfx from '../../../assets/effects/waiting_ready.mp3';
+import { useSound } from "../../../context/SoundContext";
 
 /**
  * Opciones:
@@ -25,6 +32,14 @@ export function useProcessTransition({
 
     const [flying, setFlying] = useState([]);
     const [hiddenPids, setHiddenPids] = useState(new Set());
+
+    const { soundEnabled } = useSound();
+
+    const playNewReady = useAudio(newReadySfx, soundEnabled);
+    const playReadyRunning = useAudio(readyRunningSfx, soundEnabled);
+    const playRunningTerminated = useAudio(runningTerminatedSfx, soundEnabled);
+    const playRunningWaiting = useAudio(runningWaitingSfx, soundEnabled);
+    const playWaitingReady = useAudio(waitingReadySfx, soundEnabled);
 
     // util: clearing timers on unmount
     useEffect(() => {
@@ -149,6 +164,13 @@ export function useProcessTransition({
                 const toPos = calculateDestPos(toState, pidStr, simState.processes);
 
                 triggerTransition(pidStr, fromState, toState, fromPos, toPos);
+
+                if (fromState === "New" && toState === "Ready") playNewReady();
+                if (fromState === "Ready" && toState === "Running") playReadyRunning();
+                if (fromState === "Running" && toState === "Ready") playReadyRunning();
+                if (fromState === "Running" && toState === "Terminated") playRunningTerminated();
+                if (fromState === "Running" && toState === "Waiting") playRunningWaiting();
+                if (fromState === "Waiting" && toState === "Ready") playWaitingReady();
             }
         });
 
@@ -156,6 +178,7 @@ export function useProcessTransition({
         prevProcessesRef.current = simState.processes.map(p => ({ ...p }));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [simState.processes, nodes, positions, positionOverrides, STATE_COLORS]);
+
 
     return { flying, hiddenPids };
 }

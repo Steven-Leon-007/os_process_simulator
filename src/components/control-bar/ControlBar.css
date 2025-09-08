@@ -117,7 +117,7 @@
     }
 
     .slider-container {
-        grid-row: 2 / 3;
+        grid-row: 3 / 4;
         grid-column: 1 / 5;
         width: 100%;
     }

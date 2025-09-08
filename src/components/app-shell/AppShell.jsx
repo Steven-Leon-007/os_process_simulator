@@ -1,10 +1,13 @@
 import React from 'react'
 import StateDiagram from '../state-diagram/StateDiagram'
-import InfoPanel from '../info-panel/InfoPanel'
 import ControlBar from '../control-bar/ControlBar'
 import "./AppShell.css";
+import { useSound } from '../../context/SoundContext';
 
 const AppShell = () => {
+
+  const { soundEnabled, setSoundEnabled } = useSound();
+
   return (
     <div className="app-shell">
       <div className="header">
@@ -12,6 +15,15 @@ const AppShell = () => {
         <div className="toggle-container">
           <input type="checkbox" name="details" id="details" />
           <span>Mostrar detalles técnicos</span>
+        </div>
+        <div className="toggle-container">
+          <input
+            type="checkbox"
+            checked={soundEnabled}
+            onChange={e => setSoundEnabled(e.target.checked)}
+            id="toggle-sound"
+          />
+          <span>Efectos de sonido</span>
         </div>
       </div>
       <div className="main-wrapper">
