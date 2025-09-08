@@ -28,12 +28,6 @@ export function useProcessNodes({
         const pidStr = proc.pid.toString();
         if (hiddenPids.has(pidStr)) return;
 
-        console.log(`Proceso ${proc.pid}:`, {
-          priority: proc.priority,
-          type: typeof proc.priority,
-          allFields: proc,
-        });
-
         // Datos comunes para todos los nodos
         const commonData = {
           pid: proc.pid,

@@ -131,7 +131,7 @@ const ProcessNode = ({ data }) => {
                         <div>
                           <strong>{stateTime.state}</strong>:{" "}
                           {formatTime(stateTime.duration)}
-                          {stateTime.cause && `${stateTime.cause})`}
+                          {stateTime.cause ? ` (${stateTime.cause})` : ""}
                         </div>
                         <div className="history-timestamp">
                           {new Date(stateTime.timestamp).toLocaleTimeString()}
