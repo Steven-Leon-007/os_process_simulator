@@ -122,10 +122,13 @@ const DURATIONS = {
 Puedes incluir capturas de pantalla o GIFs mostrando:
 
 - Crear proceso.
+  ![GIF demostrativo](assets/crear-proceso.gif)
 
 - Avance de estados.
+  ![GIF demostrativo](assets/avanzar-estados.gif)
 
 - Exportación CSV.
+  ![GIF demostrativo](assets/descargar-reporte.gif)
 
 ## Stack Tecnológico
 
@@ -137,6 +140,6 @@ Puedes incluir capturas de pantalla o GIFs mostrando:
 
 ## Créditos
 
-- Nombre 1 – UI y Diseño
-- Nombre 2 – FSM y Motor de Simulación
-- Nombre 3 – QA y Reportes
+- Steven Leon – UI y Diseño
+- Natalia Bernal – FSM y QA
+- Mileth Martinez – Motor de Simulación y Reportes
