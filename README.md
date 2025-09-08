@@ -122,10 +122,10 @@ const DURATIONS = {
 Puedes incluir capturas de pantalla o GIFs mostrando:
 
 - Crear proceso.
-  ![GIF demostrativo](assets/crear_proceso.gif)
+  ![GIF demostrativo](assets/crear-proceso.gif)
 
 - Avance de estados.
-  ![GIF demostrativo](assets/avanzar-estado.gif)
+  ![GIF demostrativo](assets/avanzar-estados.gif)
 
 - Exportación CSV.
   ![GIF demostrativo](assets/descargar-reporte.gif)
