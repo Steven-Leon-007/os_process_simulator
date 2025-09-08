@@ -1,125 +1,124 @@
 .control-bar {
-    display: flex;
-    width: 20%;
-    flex-direction: column;
-    gap: 12px;
-    height: 100vh;
-    padding: 1rem 0.5rem 0;
-    border-left: 2px dashed var(--color-border);
+  display: flex;
+  width: 20%;
+  flex-direction: column;
+  gap: 12px;
+  height: 100vh;
+  padding: 1rem 0.5rem 0;
+  border-left: 2px dashed var(--color-border);
 }
 
-.buttons{
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px
+.buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
 }
 
-.upper-buttons{
-    grid-column: 1 / 4;
-    display: flex;
-    gap: 12px;
-    width: 100%;
-    justify-content: center;
+.upper-buttons {
+  grid-column: 1 / 4;
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  justify-content: center;
 }
 
-.upper-buttons button{
-    width: 100%;
+.upper-buttons button {
+  width: 100%;
 }
 
-.button.manual{
-    grid-row: 2 / 3;
-    grid-column: 1 / 2;
+.button.manual {
+  grid-row: 2 / 3;
+  grid-column: 1 / 2;
 }
 
-.button.auto{
-    grid-row: 2 / 3;
-    grid-column: 2 / 3;
+.button.auto {
+  grid-row: 2 / 3;
+  grid-column: 2 / 3;
 }
-.button.pause{
-    grid-row: 2 / 3;
-    grid-column: 3 / 4;
+.button.pause {
+  grid-row: 2 / 3;
+  grid-column: 3 / 4;
 }
 
 .button {
-    background-color: var(--color-decoration);
-    border: none;
-    height: 2rem;
-    border-radius: 8px;
-    transition: background-color 0.3s ease-in-out;
+  background-color: var(--color-decoration);
+  border: none;
+  height: 2rem;
+  border-radius: 8px;
+  transition: background-color 0.3s ease-in-out;
 }
 
 .create-button {
-    background-color: #a67411; 
-    color: white;
-    font-weight: bold;
-}       
-
-.button.pause{
-    background-color: #d26a20; 
+  background-color: #a67411;
+  color: white;
+  font-weight: bold;
 }
-.button.pause:hover{
-    background-color: #f27419; 
+
+.button.pause {
+  background-color: #d26a20;
+}
+.button.pause:hover {
+  background-color: #f27419;
 }
 
 .button.create-button:hover {
-    background-color: #d29620;
-}       
-
-.button.export{
-    background-color: var(--color-bg-button);
+  background-color: #d29620;
 }
 
-.button.export:hover{
-    background-color: var(--color-bg-button-hover);
+.button.export {
+  background-color: var(--color-bg-button);
+}
+
+.button.export:hover {
+  background-color: var(--color-bg-button-hover);
 }
 
 .button.active {
-    background-color: var(--color-placeholder);
-    cursor: default;
+  background-color: var(--color-placeholder);
+  cursor: default;
 }
 
 .button.active:hover {
-    background-color: var(--color-placeholder);
-    cursor: default;
+  background-color: var(--color-placeholder);
+  cursor: default;
 }
 
-.slider-container{
-    grid-column: 1 / 3;
-    width: 100%;
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    justify-content: space-around;
+.slider-container {
+  grid-column: 1 / 3;
+  width: 100%;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: space-around;
 }
 
-.slider-container input{
-    width: 100%;
+.slider-container input {
+  width: 100%;
 }
 
 .button:hover {
-    background-color: var(--color-decoration-hover);
-    cursor: pointer;
+  background-color: var(--color-decoration-hover);
+  cursor: pointer;
 }
 
 @media screen and (max-width: 1100px) {
-    .control-bar {
-        width: 100%;
-        height: auto;
-        flex-direction: column;
-        padding: 1rem 0;
-        overflow-x: auto;
-        border: none;
-    }
+  .control-bar {
+    width: 100%;
+    height: auto;
+    flex-direction: column;
+    padding: 1rem 0;
+    overflow-x: auto;
+    border: none;
+  }
 
-    .buttons {
-        width: 90%;
-        margin: 0 auto;
-    }
+  .buttons {
+    width: 90%;
+    margin: 0 auto;
+  }
 
-    .slider-container {
-        grid-row: 2 / 3;
-        grid-column: 1 / 5;
-        width: 100%;
-    }
-    
+  .slider-container {
+    grid-row: 3 / 4;
+    grid-column: 1 / 5;
+    width: 100%;
+  }
 }
