@@ -20,8 +20,9 @@ let timer = null;
 let onUpdate = null; // callback para notificar cambios
 let processes = [];
 
-// Mapa para temporizadores de inactividad por proceso
-let inactivityTimers = {};
+// Temporizador global para detectar inactividad en modo manual
+let manualInactivityTimer = null;
+const MANUAL_INACTIVITY_TIMEOUT = 30000; // 30 segundos
 
 /**
  * Configura el callback para notificar cambios en los procesos.
@@ -39,10 +40,12 @@ export function setMode(newMode) {
   mode = newMode;
   if (timer) stop();
   if (mode === "auto" && speed > 0) start();
-  // Limpiar temporizadores de inactividad si no es manual
+  // Limpiar temporizador de inactividad si no es manual
   if (mode !== "manual") {
-    Object.values(inactivityTimers).forEach(clearTimeout);
-    inactivityTimers = {};
+    if (manualInactivityTimer) {
+      clearTimeout(manualInactivityTimer);
+      manualInactivityTimer = null;
+    }
   }
 }
 
@@ -93,62 +96,58 @@ export function stop() {
  * Aplica transiciones automáticas válidas.
  */
 export function step() {
-
   if (!processes || processes.length === 0) return;
   let updated = false;
 
-  // Transiciones automáticas
+  // Transiciones automáticas (solo uno por estado)
   const AUTO_TRANSITIONS = {
     [STATES.NEW]: (proc) => admit(proc, "auto"),
     [STATES.READY]: (proc) => assignCPU(proc, "auto"),
-    [STATES.RUNNING]: (proc) =>
-      Math.random() < 0.5 ? terminate(proc, "auto") : requestIO(proc, "auto"),
+    [STATES.RUNNING]: (proc) => {
+      const r = Math.random();
+      if (r < 0.33) return terminate(proc, "auto");
+      if (r < 0.66) return requestIO(proc, "auto");
+      return preempt(proc, "auto"); // vuelve a READY
+    },
+
     [STATES.WAITING]: (proc) => ioComplete(proc, "auto"),
   };
 
+  // Agrupa procesos por estado
+  const stateGroups = {};
   processes.forEach((proc) => {
-    if (mode === "auto" && AUTO_TRANSITIONS[proc.state]) {
-      AUTO_TRANSITIONS[proc.state](proc);
+    if (!stateGroups[proc.state]) stateGroups[proc.state] = [];
+    stateGroups[proc.state].push(proc);
+  });
+
+  Object.keys(AUTO_TRANSITIONS).forEach((state) => {
+    const group = stateGroups[state];
+    if (group && group.length > 0 && mode === "auto") {
+      // Solo el primero de cada estado transiciona
+      AUTO_TRANSITIONS[state](group[0]);
       updated = true;
     }
-    // En modo manual, no avanza automáticamente aquí
   });
   if (updated && typeof onUpdate === "function") {
     // Enviar copia profunda para forzar re-render en React
-    const cloned = processes.map(p => ({ ...p }));
+    const cloned = processes.map((p) => ({ ...p }));
     onUpdate(cloned);
   }
 }
 
-// Lógica para avance por inactividad en modo manual
-function setProcessActivity(proc) {
+// Reinicia el temporizador global de inactividad en modo manual
+export function resetManualInactivityTimer() {
   if (mode !== "manual") return;
-  // Reinicia el temporizador de inactividad para este proceso
-  if (inactivityTimers[proc.pid]) {
-    clearTimeout(inactivityTimers[proc.pid]);
+  if (manualInactivityTimer) {
+    clearTimeout(manualInactivityTimer);
   }
-  inactivityTimers[proc.pid] = setTimeout(() => {
-    // Solo avanza si sigue en modo manual y el proceso sigue en el mismo estado
+  manualInactivityTimer = setTimeout(() => {
+    // Si sigue en modo manual, cambia a automático
     if (mode === "manual") {
-      // Solo avanza si hay transición automática posible
-      const AUTO_TRANSITIONS = {
-        [STATES.NEW]: (p) => admit(p, "manual-inactivity"),
-        [STATES.READY]: (p) => assignCPU(p, "manual-inactivity"),
-        [STATES.RUNNING]: (p) => terminate(p, "manual-inactivity"),
-        [STATES.WAITING]: (p) => ioComplete(p, "manual-inactivity"),
-      };
-        if (AUTO_TRANSITIONS[proc.state]) {
-          AUTO_TRANSITIONS[proc.state](proc);
-          if (typeof onUpdate === "function") {
-            const cloned = processes.map(p => ({ ...p }));
-            onUpdate(cloned);
-          }
-        }
+      setMode("auto");
     }
-  }, 10000); // 10 segundos
+  }, MANUAL_INACTIVITY_TIMEOUT);
 }
-
-// Debes llamar a setProcessActivity(proc) cada vez que el usuario interactúe con el proceso manualmente
 
 /**
  * Actualiza la lista de procesos (ej: si cambia desde el contexto)
@@ -156,10 +155,6 @@ function setProcessActivity(proc) {
  */
 export function setProcesses(procList) {
   processes = procList;
-  // Reiniciar temporizadores de inactividad si estamos en modo manual
-  if (mode === "manual") {
-    processes.forEach(proc => setProcessActivity(proc));
-  }
 }
 
 /**

@@ -1,12 +1,16 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
-import { ReactFlow, applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-import { STATES } from '../../services/fsm'
-import "./StateDiagram.css"
+import { ReactFlow, applyNodeChanges, applyEdgeChanges } from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import { STATES } from "../../services/fsm";
+import "./StateDiagram.css";
 import { useSim } from "../../context/SimulationContext";
 import StateNode from "./nodes/StateNode";
 import ProcessNode from "./nodes/ProcessNode";
-import { getActionsByState, getPositions, STATE_COLORS } from "./utils/constants";
+import {
+  getActionsByState,
+  getPositions,
+  STATE_COLORS,
+} from "./utils/constants";
 import FlyingOverlay from "./components/FlyingOverlay";
 import ProcessMenu from "./components/ProcessMenu";
 import { useProcessNodes } from "./hooks/useProcessNodes";
@@ -20,7 +24,7 @@ const nodeTypes = {
 };
 // -----------------------------------------------------------------
 
-const StateDiagram = () => {
+const StateDiagram = ({ showDetails }) => {
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const [positions, setPositions] = useState(getPositions(window.innerWidth));
@@ -30,7 +34,15 @@ const StateDiagram = () => {
   const [baseNodes, setBaseNodes] = useStateNodes(positions, positionOverrides);
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useStateEdges();
-  const { state: simState, admit, assignCPU, terminate, preempt, requestIO, ioComplete } = useSim();
+  const {
+    state: simState,
+    admit,
+    assignCPU,
+    terminate,
+    preempt,
+    requestIO,
+    ioComplete,
+  } = useSim();
   const [menu, setMenu] = useState(null);
   const menuRef = useRef(null);
 
@@ -53,7 +65,6 @@ const StateDiagram = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -70,7 +81,6 @@ const StateDiagram = () => {
     };
   }, [menu]);
 
-
   useProcessNodes({
     simState,
     baseNodes,
@@ -80,6 +90,7 @@ const StateDiagram = () => {
     hiddenPids,
     STATE_COLORS,
     setNodes,
+    showDetails,
   });
 
   const onNodesChange = useCallback(
@@ -95,9 +106,11 @@ const StateDiagram = () => {
               const stateName = movedNode.data.id;
 
               updatedNodes = updatedNodes.map((node) => {
-                if (node.type === "processNode" &&
+                if (
+                  node.type === "processNode" &&
                   node.data.state === stateName &&
-                  !processPositionOverrides[node.id]) {
+                  !processPositionOverrides[node.id]
+                ) {
                   const idx = parseInt(node.data.index, 10);
                   const gapX = stateName === "Terminated" ? 60 : 42;
                   const perRow = stateName === "Terminated" ? 2 : 3;
@@ -128,27 +141,36 @@ const StateDiagram = () => {
   const onNodeDragStop = useCallback((event, node) => {
     if (node.type === "stateNode") {
       const newPos = node.position;
-      setPositionOverrides(prev => ({ ...prev, [node.id]: newPos }));
-      setBaseNodes(prev =>
-        prev.map(n => (n.id === node.id ? { ...n, position: newPos } : n))
+      setPositionOverrides((prev) => ({ ...prev, [node.id]: newPos }));
+      setBaseNodes((prev) =>
+        prev.map((n) => (n.id === node.id ? { ...n, position: newPos } : n))
       );
     } else if (node.type === "processNode") {
-      setProcessPositionOverrides(prev => ({
+      setProcessPositionOverrides((prev) => ({
         ...prev,
-        [node.id]: node.position
+        [node.id]: node.position,
       }));
     }
   }, []);
 
   const onEdgesChange = useCallback(
     (changes) => setEdges((es) => applyEdgeChanges(changes, es)),
-    [],
+    []
   );
 
-  const ACTIONS_BY_STATE = getActionsByState(admit, assignCPU, terminate, requestIO, preempt, ioComplete, STATE_COLORS, STATES);
+  const ACTIONS_BY_STATE = getActionsByState(
+    admit,
+    assignCPU,
+    terminate,
+    requestIO,
+    preempt,
+    ioComplete,
+    STATE_COLORS,
+    STATES
+  );
 
   const onNodeClick = useCallback((event, node) => {
-    if (node.type === 'processNode') {
+    if (node.type === "processNode") {
       const bounds = reactFlowWrapper.current?.getBoundingClientRect();
       const x = event.clientX - (bounds?.left || 0);
       const y = event.clientY - (bounds?.top || 0);
@@ -164,7 +186,7 @@ const StateDiagram = () => {
     try {
       await action.fn(pid);
     } catch (e) {
-      console.error('Acción falló', e);
+      console.error("Acción falló", e);
     } finally {
       setMenu(null);
     }
@@ -175,11 +197,11 @@ const StateDiagram = () => {
       <div
         ref={reactFlowWrapper}
         style={{
-          width: '100%',
-          height: '500px',
-          borderRadius: '8px',
-          position: 'relative',
-          overflow: 'hidden'
+          width: "100%",
+          height: "500px",
+          borderRadius: "8px",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
         <ReactFlow
@@ -194,7 +216,10 @@ const StateDiagram = () => {
           elementsSelectable={true}
           panOnScroll={false}
           panOnDrag={false}
-          translateExtent={[[0, 0], [window.innerWidth * 0.8, 500]]}
+          translateExtent={[
+            [0, 0],
+            [window.innerWidth * 0.8, 500],
+          ]}
           zoomOnScroll={false}
           zoomOnPinch={false}
           zoomOnDoubleClick={false}
@@ -223,6 +248,6 @@ const StateDiagram = () => {
       </div>
     </div>
   );
-}
+};
 
 export default StateDiagram;
