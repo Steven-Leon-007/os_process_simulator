@@ -3,6 +3,10 @@
 Simulador web que modela los estados **New → Ready → Running → Waiting → Terminated** de procesos en un sistema operativo.  
 Permite modo **manual** y **automático**, control de velocidad y exportación de historial en formato CSV.
 
+## Explicación técnica
+
+- [Manual en PDF](assets/documento-explicacion-tecnica-simulador.pdf)
+
 ## Requisitos Previos
 
 Antes de instalar la aplicación, asegúrate de tener:
