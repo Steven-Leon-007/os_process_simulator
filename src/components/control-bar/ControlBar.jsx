@@ -1,15 +1,13 @@
-
-import React, { useState } from 'react';
-import { useSim } from '../../context/SimulationContext';
-import './ControlBar.css';
-import InfoPanel from '../info-panel/InfoPanel';
-import useAudio from '../../hooks/useAudio';
-import createProcessSfx from '../../assets/effects/create_process.mp3';
-import { useSound } from '../../context/SoundContext';
+import React, { useState } from "react";
+import { useSim } from "../../context/SimulationContext";
+import "./ControlBar.css";
+import InfoPanel from "../info-panel/InfoPanel";
+import useAudio from "../../hooks/useAudio";
+import createProcessSfx from "../../assets/effects/create_process.mp3";
+import { useSound } from "../../context/SoundContext";
 
 const SPEEDS = [6000, 3000, 1666, 1500]; // ms para x0.5, x1.0, x1.5, x2.0
-const SPEED_LABELS = ['x0.5', 'x1.0', 'x1.5', 'x2.0'];
-
+const SPEED_LABELS = ["x0.5", "x1.0", "x1.5", "x2.0"];
 
 const ControlBar = () => {
   const { create, speed, setSpeed, mode, setMode, state, pause } = useSim();
@@ -18,22 +16,22 @@ const ControlBar = () => {
   const playCreate = useAudio(createProcessSfx, soundEnabled);
 
   const handleCreate = () => {
-    create(0);
+    create();
     playCreate();
   };
 
   const handleManual = () => {
-    setMode && setMode('manual');
+    setMode && setMode("manual");
     setShowSlider(false);
   };
 
   const handleAuto = () => {
-    setMode && setMode('auto');
+    setMode && setMode("auto");
     setShowSlider(true);
   };
 
   const handlePause = () => {
-    setMode && setMode('pause');
+    setMode && setMode("pause");
     setShowSlider(false);
   };
 
@@ -43,20 +41,34 @@ const ControlBar = () => {
   };
 
   function downloadCSV(processes) {
-    const header = 'PID;Priority;PC;CpuRegisters;Syscalls;De;Para;Timestamp;Causa\n';
-    const rows = processes.flatMap(p =>
-      p.history.length > 0
-        ? p.history.map(h =>
-          `${p.pid};${h.priority};${h.pc};"${JSON.stringify(h.cpuRegisters)}";"${JSON.stringify(h.syscalls)}";${h.from};${h.to};${h.timestamp};${h.cause}`
-        )
-        : [`${p.pid};${p.priority};${p.pc};"${JSON.stringify(p.cpuRegisters)}";"${JSON.stringify(p.syscalls)}";${p.state};${p.state};${p.createdAt};Creado`]
-    ).join('\n');
+    const header =
+      "PID;Priority;PC;CpuRegisters;Syscalls;De;Para;Timestamp;Causa\n";
+    const rows = processes
+      .flatMap((p) =>
+        p.history.length > 0
+          ? p.history.map(
+              (h) =>
+                `${p.pid};${h.priority};${h.pc};"${JSON.stringify(
+                  h.cpuRegisters
+                )}";"${JSON.stringify(h.syscalls)}";${h.from};${h.to};${
+                  h.timestamp
+                };${h.cause}`
+            )
+          : [
+              `${p.pid};${p.priority};${p.pc};"${JSON.stringify(
+                p.cpuRegisters
+              )}";"${JSON.stringify(p.syscalls)}";${p.state};${p.state};${
+                p.createdAt
+              };Creado`,
+            ]
+      )
+      .join("\n");
     const csvContent = header + rows;
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = 'procesos_historial.csv';
+    a.download = "procesos_historial.csv";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -64,19 +76,44 @@ const ControlBar = () => {
   }
 
   return (
-    <div className='control-bar'>
+    <div className="control-bar">
       <div className="buttons">
         <div className="upper-buttons">
-          <button className="button create-button" onClick={handleCreate}>Crear</button>
-          <button className="button export" onClick={() => downloadCSV(state.processes)}>
+          <button className="button create-button" onClick={handleCreate}>
+            Crear
+          </button>
+          <button
+            className="button export"
+            onClick={() => downloadCSV(state.processes)}
+          >
             Exportar CSV
           </button>
         </div>
-        <button className={mode === 'manual' ? 'button manual active' : 'button manual'} disabled={mode === "manual"} onClick={handleManual}>Manual</button>
+        <button
+          className={
+            mode === "manual" ? "button manual active" : "button manual"
+          }
+          disabled={mode === "manual"}
+          onClick={handleManual}
+        >
+          Manual
+        </button>
 
-        <button className={mode === 'auto' ? 'button auto active' : 'button auto'} disabled={mode === "auto"} onClick={handleAuto}>Automático</button>
+        <button
+          className={mode === "auto" ? "button auto active" : "button auto"}
+          disabled={mode === "auto"}
+          onClick={handleAuto}
+        >
+          Automático
+        </button>
 
-        <button className={mode === 'pause' ? 'button pause active' : 'button pause'} disabled={mode === "pause"} onClick={handlePause}>❚❚</button>
+        <button
+          className={mode === "pause" ? "button pause active" : "button pause"}
+          disabled={mode === "pause"}
+          onClick={handlePause}
+        >
+          ❚❚
+        </button>
         {showSlider && (
           <div className="slider-container">
             <input
@@ -85,7 +122,9 @@ const ControlBar = () => {
               max={SPEEDS.length - 1}
               step={1}
               value={getCurrentSpeedIndex()}
-              onChange={e => setSpeed && setSpeed(SPEEDS[parseInt(e.target.value)])}
+              onChange={(e) =>
+                setSpeed && setSpeed(SPEEDS[parseInt(e.target.value)])
+              }
             />
             <span>{SPEED_LABELS[getCurrentSpeedIndex()]}</span>
           </div>
@@ -93,7 +132,7 @@ const ControlBar = () => {
       </div>
 
       <InfoPanel />
-    </div >
+    </div>
   );
 };
 
