@@ -161,13 +161,17 @@ export function setProcesses(procList) {
  * Limpia el motor y callback
  */
 export function resetEngine() {
-  stop();
+  stop(); // detiene el setInterval
   processes = [];
   onUpdate = null;
   mode = "manual";
   speed = 1000;
-  Object.values(inactivityTimers).forEach(clearTimeout);
-  inactivityTimers = {};
+
+  // limpia el temporizador de inactividad manual si estaba activo
+  if (manualInactivityTimer) {
+    clearTimeout(manualInactivityTimer);
+    manualInactivityTimer = null;
+  }
 }
 
 // Exporta el estado actual del motor
