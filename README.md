@@ -7,7 +7,7 @@ Permite modo **manual** y **automático**, control de velocidad y exportación d
 
 Antes de instalar la aplicación, asegúrate de tener:
 
-- **Node.js** >= 20  
+- **Node.js** >= 20.12  
   [Descargar Node.js](https://nodejs.org/)
 - **npm** (ya viene incluido con Node)
 

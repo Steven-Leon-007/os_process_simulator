@@ -58,7 +58,6 @@
   font-size: 11px;
   cursor: pointer;
   white-space: nowrap;
-
 }
 
 .process-pid {
@@ -122,4 +121,267 @@
   font-size: 11px;
   color: #111;
   background: var(--color-secondary);
+}
+
+.process-tooltip {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #ffffff;
+  padding: 16px 20px;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: nowrap;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  min-width: 280px;
+  max-width: 400px;
+}
+
+/* Flecha del tooltip */
+.process-tooltip::before {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: #1a1a2e;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+/* Elementos dentro del tooltip */
+.process-tooltip > div {
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.process-tooltip > div:last-child {
+  margin-bottom: 0;
+}
+
+.process-tooltip strong {
+  color: #64b5f6;
+  font-weight: 600;
+  margin-right: 8px;
+  min-width: fit-content;
+}
+
+/* Sección del historial */
+.history-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  display: block !important;
+}
+
+.history-section > strong {
+  display: block;
+  margin-bottom: 12px;
+  color: #81c784;
+  font-size: 14px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-item {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border-left: 3px solid #64b5f6;
+  display: block !important;
+  margin-bottom: 0 !important;
+  transition: all 0.2s ease;
+}
+
+.history-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(2px);
+}
+
+.history-item > div:first-child {
+  color: #ffffff;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.history-timestamp {
+  color: #b0bec5 !important;
+  font-size: 11px;
+  font-weight: 400 !important;
+  opacity: 0.8;
+  margin-bottom: 0 !important;
+}
+
+/* Información del estado actual */
+.current-state-info {
+  background: rgba(129, 199, 132, 0.15);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 3px solid #81c784;
+  margin-top: 12px;
+}
+
+/* Barra de progreso */
+.progress-info {
+  margin-top: 12px;
+  margin-bottom: 8px;
+  display: block !important;
+}
+
+.progress-container {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 8px;
+  position: relative;
+}
+
+.progress-bar {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #64b5f6 0%, #42a5f5 100%);
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.progress-bar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .process-tooltip {
+    min-width: 250px;
+    max-width: 320px;
+    font-size: 12px;
+    padding: 14px 16px;
+    left: 0;
+    right: 0;
+    margin: 0 10px;
+    transform: none;
+  }
+
+  .process-tooltip::before {
+    left: 20px;
+    transform: none;
+  }
+
+  .history-item {
+    padding: 8px 10px;
+  }
+
+  .process-tooltip strong {
+    margin-right: 6px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .process-tooltip {
+    min-width: 200px;
+    max-width: 280px;
+    font-size: 11px;
+    padding: 12px 14px;
+    white-space: normal;
+  }
+
+  .history-item {
+    padding: 6px 8px;
+  }
+
+  .history-timestamp {
+    font-size: 10px !important;
+  }
+
+  .progress-container {
+    height: 4px;
+  }
+}
+
+/* Estados específicos para diferentes tipos de información */
+.process-tooltip div[data-info-type="priority"] strong {
+  color: #ffb74d;
+}
+
+.process-tooltip div[data-info-type="cpu"] strong {
+  color: #f48fb1;
+}
+
+.process-tooltip div[data-info-type="syscalls"] strong {
+  color: #ce93d8;
+}
+
+/* Animaciones de entrada */
+.process-tooltip {
+  animation: tooltipFadeIn 0.2s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Mejorar la legibilidad en diferentes fondos */
+.process-tooltip {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Asegurar contraste en el historial */
+.history-item {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.history-item > div:first-child strong {
+  color: #e3f2fd;
+}
+
+/* Estilos para cuando no hay historial */
+.history-section > div:last-child {
+  color: #90a4ae;
+  font-style: italic;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  text-align: center;
 }
