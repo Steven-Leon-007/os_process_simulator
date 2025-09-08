@@ -11,7 +11,6 @@ const SPEED_LABELS = ["x0.5", "x1.0", "x1.5", "x2.0"];
 
 const ControlBar = () => {
   const { create, speed, setSpeed, mode, setMode, state, pause } = useSim();
-  const [showSlider, setShowSlider] = useState(false);
   const { soundEnabled } = useSound();
   const playCreate = useAudio(createProcessSfx, soundEnabled);
 
@@ -22,17 +21,14 @@ const ControlBar = () => {
 
   const handleManual = () => {
     setMode && setMode("manual");
-    setShowSlider(false);
   };
 
   const handleAuto = () => {
     setMode && setMode("auto");
-    setShowSlider(true);
   };
 
   const handlePause = () => {
     setMode && setMode("pause");
-    setShowSlider(false);
   };
 
   const getCurrentSpeedIndex = () => {
@@ -114,7 +110,7 @@ const ControlBar = () => {
         >
           ❚❚
         </button>
-        {showSlider && (
+        {mode === "auto" && (
           <div className="slider-container">
             <input
               type="range"

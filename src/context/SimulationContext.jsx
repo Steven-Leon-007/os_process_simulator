@@ -30,6 +30,14 @@ export function SimulationProvider({ children }) {
         });
     }, []);
 
+    useEffect(() => {
+        engine.setModeChangeCallback((newMode) => {
+            setMode(newMode);
+        });
+        // Limpia el callback al desmontar
+        return () => engine.setModeChangeCallback(null);
+    }, []);
+
     // Cambia el modo en el motor y en el contexto
     const handleSetMode = (newMode) => {
         setMode(newMode);

@@ -19,10 +19,11 @@ let speed = 3000; // ms entre transiciones (0 = pausa)
 let timer = null;
 let onUpdate = null; // callback para notificar cambios
 let processes = [];
+let onModeChange = null;
 
 // Temporizador global para detectar inactividad en modo manual
 let manualInactivityTimer = null;
-const MANUAL_INACTIVITY_TIMEOUT = 30000; // 30 segundos
+let MANUAL_INACTIVITY_TIMEOUT = 45000;
 
 /**
  * Configura el callback para notificar cambios en los procesos.
@@ -30,6 +31,23 @@ const MANUAL_INACTIVITY_TIMEOUT = 30000; // 30 segundos
  */
 export function setUpdateCallback(cb) {
   onUpdate = cb;
+}
+/**
+ * callback para notificar cambios en el modo de ejecución del motor.
+ * @param {function} cb
+ */
+export function setModeChangeCallback(cb) {
+  onModeChange = cb;
+}
+
+/**
+ * Función para permitir cambios en el tiempo de inactividad del motor.
+ * @param {function} ms Nuevo tiempo en ms (default 45000 ms)
+ */
+export function setManualInactivityTimeout(ms) {
+  MANUAL_INACTIVITY_TIMEOUT = ms;
+  // Si hay un timer activo, reinícialo con el nuevo valor
+  resetManualInactivityTimer();
 }
 
 /**
@@ -46,6 +64,9 @@ export function setMode(newMode) {
       clearTimeout(manualInactivityTimer);
       manualInactivityTimer = null;
     }
+  }
+  if (typeof onModeChange === "function") {
+    onModeChange(mode);
   }
 }
 
@@ -137,12 +158,15 @@ export function step() {
 
 // Reinicia el temporizador global de inactividad en modo manual
 export function resetManualInactivityTimer() {
-  if (mode !== "manual") return;
+  // Limpia cualquier timer activo primero
   if (manualInactivityTimer) {
     clearTimeout(manualInactivityTimer);
+    manualInactivityTimer = null;
   }
+  // Si está desactivado, no hagas nada más
+  if (MANUAL_INACTIVITY_TIMEOUT === Infinity) return;
+  if (mode !== "manual") return;
   manualInactivityTimer = setTimeout(() => {
-    // Si sigue en modo manual, cambia a automático
     if (mode === "manual") {
       setMode("auto");
     }
