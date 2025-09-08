@@ -15,7 +15,7 @@ describe("FSM Core", () => {
     resetPID(); // reinicia PIDs antes de cada prueba
   });
 
-  // ✅ --- PRUEBAS VÁLIDAS ---
+  // Pruebas válidas
   test("New → Ready (admit)", () => {
     const p = createProcess(generatePID());
     admit(p, "test");
@@ -55,7 +55,7 @@ describe("FSM Core", () => {
     expect(p.state).toBe("Ready");
   });
 
-  // ❌ --- PRUEBAS INVÁLIDAS ---
+  // Pruebas inválidas
   test("New → Terminated debe fallar", () => {
     const p = createProcess(generatePID());
     expect(() => terminate(p)).toThrow();
@@ -85,7 +85,7 @@ describe("FSM Core", () => {
     expect(() => requestIO(p)).toThrow();
   });
 
-  // 📜 --- HISTORIAL ---
+  // Pruebas de historial
   test("Cada transición válida se guarda en el history", () => {
     const p = createProcess(generatePID());
     admit(p, "admit test");

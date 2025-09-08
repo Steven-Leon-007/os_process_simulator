@@ -15,7 +15,7 @@ Antes de instalar la aplicación, asegúrate de tener:
 
 ```bash
 # 1. Clona el repositorio de GitHub en una carpeta local:
-    git clone https://github.com/Steven-Leon-007/SVADI_project
+    git clone https://github.com/Steven-Leon-007/os_process_simulator
 
 # 2. Entra en la carpeta raiz del proyecto:
     cd carpeta-raiz-proyecto
