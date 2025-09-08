@@ -172,6 +172,23 @@ export function resetManualInactivityTimer() {
     }
   }, MANUAL_INACTIVITY_TIMEOUT);
 }
+/**
+ * Resetear la simulación a estado inicial.
+ */
+export function reset() {
+  processes = [];
+  if (timer) {
+    clearTimeout(timer);
+    timer = null;
+  }
+  if (manualInactivityTimer) {
+    clearTimeout(manualInactivityTimer);
+    manualInactivityTimer = null;
+  }
+  mode = "manual";
+  if (typeof onUpdate === "function") onUpdate(processes);
+  if (typeof onModeChange === "function") onModeChange(mode);
+}
 
 /**
  * Actualiza la lista de procesos (ej: si cambia desde el contexto)

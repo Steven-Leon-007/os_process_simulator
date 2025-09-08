@@ -57,7 +57,8 @@ export function SimulationProvider({ children }) {
             setMode: handleSetMode,
             speed,
             setSpeed: handleSetSpeed,
-            pause: engine.pause
+            pause: engine.pause,
+            reset: engine.reset
         }}>
             {children}
         </SimulationContext.Provider>
