@@ -47,7 +47,7 @@ Clic en **Crear**. Se crea un proceso con prioridad aleatoria y aparece en estad
 **Modo Manual / Automático**  
 Usa el interruptor:
 
-- _Manual_: cada transición se realiza con los botones, si el sistema no detecta actividad por parte del usuario después de 45 segundos se cambia a estado automático.
+- _Manual_: cada transición se realiza con los botones, si el sistema no detecta actividad por parte del usuario después de 45 segundos se cambia a estado automático(este tiempo es configurable).
 - _Automático_: el motor avanza según tiempos predefinidos.
 
 **Control de velocidad**  
@@ -93,6 +93,11 @@ Clic en **Exportar CSV** para descargar el historial de transiciones de cada pro
   - **Efectos de sonido:**  
     Activa o desactiva los sonidos asociados a los eventos del simulador  
     (por ejemplo: creación de un proceso, cambio de estado, finalización).
+
+  - **Barra inferior – Tiempo de inactividad:**
+    En la esquina inferior izquierda puedes configurar los "Segundos de inactividad" tras los cuales el simulador cambia automáticamente de **Modo Manual** a **Modo Automático**.
+
+  - **Botón "Limpiar Procesos" (parte inferior derecha):** elimina todos los procesos activos y reinicia el temporizador de la simulación.
 
 ## Modos de Operación
 
