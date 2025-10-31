@@ -1,4 +1,5 @@
 import { getTimestamp } from "../utils/time.js";
+import * as MMU from "./mmu.js";
 
 /**
  * Estados posibles de un proceso.
@@ -46,11 +47,20 @@ const VALID_TRANSITIONS = {
  *
  * @param {string} pid PID del proceso
  * @param {number} [priority=0] Prioridad del proceso (0-9)
+ * @param {number} [numPages=4] Número de páginas lógicas del proceso
+ * @param {number} [initialLoadedPages=2] Número de páginas a cargar inicialmente
  * @returns Un objeto que representa el proceso
  */
-export function createProcess(pid, priority) {
+export function createProcess(pid, priority, numPages = 4, initialLoadedPages = 2) {
   const now = getTimestamp();
-  return {
+  
+  // Registrar proceso en la MMU y crear su tabla de páginas
+  MMU.registerProcess(pid, numPages);
+  
+  // Intentar cargar páginas iniciales (puede fallar si no hay marcos libres)
+  const allocationResult = MMU.allocateFramesForProcess(pid, initialLoadedPages);
+  
+  const process = {
     pid: pid,
     state: STATES.NEW,
     createdAt: now,
@@ -60,7 +70,25 @@ export function createProcess(pid, priority) {
     cpuRegisters: {},
     syscalls: [],
     history: [],
+    // Información de memoria
+    memory: {
+      numPages: numPages,
+      loadedPages: allocationResult.allocatedFrames.length,
+      pageFaults: 0,
+      memoryAccesses: 0,
+    },
   };
+
+  // Registrar asignación de memoria en syscalls
+  if (allocationResult.allocatedFrames.length > 0) {
+    process.syscalls.push({
+      type: "MEMORY_INIT",
+      at: now,
+      allocatedFrames: allocationResult.allocatedFrames,
+    });
+  }
+
+  return process;
 }
 
 /**
@@ -93,6 +121,22 @@ function transition(process, toState, cause = "manual") {
     process.pc += 1;
     process.cpuRegisters["AX"] = (process.cpuRegisters["AX"] || 0) + 10;
     process.syscalls.push({ type: "CPU_ASSIGN", at: now });
+
+    // Simular accesos a memoria cuando el proceso está en ejecución
+    const memoryAccessResult = simulateMemoryAccess(process);
+    if (memoryAccessResult) {
+      // Si hubo un page fault, registrarlo
+      if (memoryAccessResult.pageFault) {
+        process.memory.pageFaults += 1;
+        process.syscalls.push({
+          type: "PAGE_FAULT",
+          at: now,
+          pageNumber: memoryAccessResult.pageNumber,
+          handled: memoryAccessResult.handled,
+        });
+      }
+      process.memory.memoryAccesses += 1;
+    }
   }
   if (toState === STATES.WAITING) {
     process.cpuRegisters["IO_WAIT"] = now;
@@ -105,6 +149,20 @@ function transition(process, toState, cause = "manual") {
   if (toState === STATES.TERMINATED) {
     process.cpuRegisters["END"] = now;
     process.syscalls.push({ type: "TERMINATE", at: now });
+
+    // Liberar todos los marcos de memoria del proceso
+    const freeResult = MMU.freeFramesOfProcess(process.pid);
+    if (freeResult.success) {
+      process.syscalls.push({
+        type: "MEMORY_FREE",
+        at: now,
+        freedFrames: freeResult.freedFrames,
+        count: freeResult.count,
+      });
+    }
+
+    // Desregistrar proceso de la MMU
+    MMU.unregisterProcess(process.pid);
   }
   // Actualizar historial, guardando el estado actual de pc, cpuRegisters y syscalls
   process.history.push({
@@ -201,4 +259,137 @@ export function ioComplete(process, cause) {
  */
 export function terminate(process, cause) {
   return transition(process, STATES.TERMINATED, cause);
+}
+
+/**
+ * Simula un acceso a memoria durante la ejecución del proceso
+ * Genera una dirección lógica aleatoria y la traduce usando la MMU
+ *
+ * @param {object} process Proceso que accede a memoria
+ * @returns {object|null} Resultado del acceso a memoria o null si hay error
+ */
+function simulateMemoryAccess(process) {
+  if (!process.memory) {
+    return null;
+  }
+
+  const pageSize = MMU.getPageSize();
+  const maxAddress = process.memory.numPages * pageSize;
+
+  // Generar dirección lógica aleatoria dentro del espacio de direcciones del proceso
+  const logicalAddress = Math.floor(Math.random() * maxAddress);
+
+  // Intentar traducir la dirección
+  const translationResult = MMU.translateAddress(process.pid, logicalAddress);
+
+  if (translationResult.success) {
+    // Acceso exitoso
+    return {
+      success: true,
+      logicalAddress,
+      physicalAddress: translationResult.physicalAddress,
+      pageNumber: translationResult.pageNumber,
+      frameNumber: translationResult.frameNumber,
+      pageFault: false,
+    };
+  }
+
+  if (translationResult.pageFault) {
+    // Page Fault detectado - intentar manejarlo
+    const faultResult = MMU.handlePageFault(process.pid, translationResult.pageNumber);
+
+    return {
+      success: false,
+      pageFault: true,
+      pageNumber: translationResult.pageNumber,
+      logicalAddress,
+      handled: faultResult.success,
+      faultResult,
+    };
+  }
+
+  // Error en la traducción
+  return {
+    success: false,
+    pageFault: false,
+    error: translationResult.error,
+    logicalAddress,
+  };
+}
+
+/**
+ * Fuerza un acceso a memoria para un proceso específico
+ * Útil para testing o simulación manual
+ *
+ * @param {object} process Proceso que accede a memoria
+ * @param {number} logicalAddress Dirección lógica a acceder
+ * @returns {object} Resultado del acceso incluyendo posibles page faults
+ */
+export function accessMemory(process, logicalAddress) {
+  const pageSize = MMU.getPageSize();
+  const pageNumber = Math.floor(logicalAddress / pageSize);
+
+  // Registrar el acceso
+  process.memory.memoryAccesses += 1;
+
+  // Intentar traducir la dirección
+  const translationResult = MMU.translateAddress(process.pid, logicalAddress);
+
+  if (translationResult.success) {
+    return {
+      success: true,
+      logicalAddress,
+      physicalAddress: translationResult.physicalAddress,
+      pageNumber: translationResult.pageNumber,
+      frameNumber: translationResult.frameNumber,
+      pageFault: false,
+    };
+  }
+
+  if (translationResult.pageFault) {
+    // Page Fault - intentar manejarlo
+    process.memory.pageFaults += 1;
+
+    const faultResult = MMU.handlePageFault(process.pid, pageNumber);
+
+    // Registrar en syscalls
+    const now = getTimestamp();
+    process.syscalls.push({
+      type: "PAGE_FAULT",
+      at: now,
+      pageNumber,
+      logicalAddress,
+      handled: faultResult.success,
+    });
+
+    // Si se manejó exitosamente, reintentar la traducción
+    if (faultResult.success) {
+      const retryResult = MMU.translateAddress(process.pid, logicalAddress);
+      return {
+        success: retryResult.success,
+        pageFault: true,
+        handled: true,
+        pageNumber,
+        logicalAddress,
+        physicalAddress: retryResult.physicalAddress,
+        frameNumber: retryResult.frameNumber,
+      };
+    }
+
+    return {
+      success: false,
+      pageFault: true,
+      handled: false,
+      pageNumber,
+      logicalAddress,
+      error: faultResult.error,
+    };
+  }
+
+  return {
+    success: false,
+    pageFault: false,
+    error: translationResult.error,
+    logicalAddress,
+  };
 }
