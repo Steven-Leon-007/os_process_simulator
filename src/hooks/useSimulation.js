@@ -18,12 +18,20 @@ function reducer(state, action) {
         action.numPages ?? 4,
         action.initialLoadedPages ?? 2
       );
+      // Notificar callback de memoria si existe
+      if (action.onMemoryChange) {
+        action.onMemoryChange();
+      }
       return { ...state, processes: [...state.processes, p], selectedPid: pid };
     }
     case "UPDATE_PROCESS": {
       const updated = state.processes.map((pr) =>
         pr.pid === action.pid ? { ...action.process } : pr
       );
+      // Notificar callback de memoria si existe
+      if (action.onMemoryChange) {
+        action.onMemoryChange();
+      }
       return { ...state, processes: updated };
     }
     case "SELECT":

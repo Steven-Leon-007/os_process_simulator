@@ -10,6 +10,8 @@ export function SimulationProvider({ children }) {
     const sim = useSimulation()
     const [mode, setMode] = useState('manual');
     const [speed, setSpeed] = useState(3000);
+    const [memoryState, setMemoryState] = useState(null);
+    const [memoryVersion, setMemoryVersion] = useState(0);
 
     // Inicializar memoria y MMU al montar el componente
     useEffect(() => {
@@ -19,7 +21,11 @@ export function SimulationProvider({ children }) {
         Memory.initializeMemory(TOTAL_FRAMES, PAGE_SIZE);
         MMU.initializeMMU(PAGE_SIZE);
         
-        console.log('Memory initialized:', Memory.getMemorySnapshot());
+        // Inicializar estado de memoria
+        const initialState = Memory.getMemorySnapshot();
+        setMemoryState(initialState);
+        
+        console.log('Memory initialized:', initialState);
     }, []);
 
     // Crear procesos automáticamente cada 7 segundos en modo automático
@@ -36,10 +42,19 @@ export function SimulationProvider({ children }) {
         engine.setProcesses(sim.state.processes);
     }, [sim.state.processes]);
 
+    // Actualizar estado de memoria cuando cambien los procesos
+    useEffect(() => {
+        if (sim.state.processes.length > 0) {
+            updateMemoryState();
+        }
+    }, [sim.state.processes, memoryVersion]);
+
     // Actualiza procesos en la UI cuando el motor los cambie
     useEffect(() => {
         engine.setUpdateCallback((newProcesses) => {
             sim.dispatch({ type: 'SET', payload: { processes: newProcesses } });
+            // Actualizar memoria cuando el motor actualice procesos
+            updateMemoryState();
         });
     }, []);
 
@@ -63,6 +78,18 @@ export function SimulationProvider({ children }) {
         engine.setSpeed(newSpeed);
     };
 
+    // Actualizar estado de memoria desde los servicios
+    const updateMemoryState = () => {
+        const snapshot = Memory.getMemorySnapshot();
+        setMemoryState(snapshot);
+    };
+
+    // Forzar actualización de memoria (para llamadas manuales)
+    const refreshMemory = () => {
+        setMemoryVersion(prev => prev + 1);
+        updateMemoryState();
+    };
+
     // Obtener snapshot de memoria
     const getMemorySnapshot = () => {
         return Memory.getMemorySnapshot();
@@ -76,6 +103,18 @@ export function SimulationProvider({ children }) {
     // Obtener tabla de páginas de un proceso
     const getProcessPageTable = (pid) => {
         return MMU.getProcessPageTable(pid);
+    };
+
+    // Obtener todas las tablas de páginas
+    const getAllPageTables = () => {
+        const pageTables = {};
+        sim.state.processes.forEach(process => {
+            const pageTable = MMU.getProcessPageTable(process.pid);
+            if (pageTable) {
+                pageTables[process.pid] = pageTable;
+            }
+        });
+        return pageTables;
     };
 
     // Obtener historial de reemplazos
@@ -107,10 +146,15 @@ export function SimulationProvider({ children }) {
             setSpeed: handleSetSpeed,
             pause: engine.pause,
             reset: engine.reset,
+            // Estado de memoria reactivo
+            memoryState,
+            updateMemoryState,
+            refreshMemory,
             // Funciones de memoria
             getMemorySnapshot,
             getProcessMemoryStats,
             getProcessPageTable,
+            getAllPageTables,
             getReplacementHistory,
             getReplacementStats,
             getClockState,
