@@ -78,6 +78,26 @@ export function SimulationProvider({ children }) {
         return MMU.getProcessPageTable(pid);
     };
 
+    // Obtener historial de reemplazos
+    const getReplacementHistory = () => {
+        return MMU.getReplacementHistory();
+    };
+
+    // Obtener estadísticas de reemplazo
+    const getReplacementStats = () => {
+        return MMU.getReplacementStats();
+    };
+
+    // Obtener estado del algoritmo Clock
+    const getClockState = () => {
+        return MMU.getClockState();
+    };
+
+    // Verificar si la memoria está llena
+    const isMemoryFull = () => {
+        return MMU.isMemoryFull();
+    };
+
     return (
         <SimulationContext.Provider value={{
             ...sim,
@@ -91,6 +111,10 @@ export function SimulationProvider({ children }) {
             getMemorySnapshot,
             getProcessMemoryStats,
             getProcessPageTable,
+            getReplacementHistory,
+            getReplacementStats,
+            getClockState,
+            isMemoryFull,
         }}>
             {children}
         </SimulationContext.Provider>

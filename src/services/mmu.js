@@ -6,6 +6,7 @@
 
 import * as Memory from './memory.js';
 import * as PageTable from './pageTable.js';
+import * as PageFaultHandler from './pageFaultHandler.js';
 
 // Almacén de tablas de páginas por proceso
 const processPageTables = new Map();
@@ -144,6 +145,7 @@ export function translateAddress(pid, logicalAddress) {
 
 /**
  * Maneja una falla de página (Page Fault)
+ * Utiliza el PageFaultHandler para gestionar la asignación y reemplazo
  * @param {string} pid - ID del proceso
  * @param {number} pageNumber - Número de página que causó el fallo
  * @returns {object} Resultado del manejo de la falla
@@ -177,38 +179,21 @@ export function handlePageFault(pid, pageNumber) {
     };
   }
 
-  // Manejo por defecto: intentar asignar un marco libre
-  const freeFrame = Memory.getFreeFrame();
+  // Usar el PageFaultHandler para manejar el page fault
+  const result = PageFaultHandler.handlePageFault(pid, pageNumber, pageTable);
 
-  if (freeFrame === null) {
-    return {
-      success: false,
-      error: 'No free frames available',
-      requiresReplacement: true,
-      pageNumber,
-    };
+  // Si hubo reemplazo y se requiere actualizar la tabla de la víctima
+  if (result.success && result.replacement && result.requiresVictimTableUpdate) {
+    const victimPid = result.victim.pid;
+    const victimPageNumber = result.victim.pageNumber;
+    const victimPageTable = processPageTables.get(victimPid);
+
+    if (victimPageTable) {
+      PageFaultHandler.updateVictimPageTable(victimPageTable, victimPageNumber);
+    }
   }
 
-  // Asignar el marco a la página
-  const allocated = Memory.allocateFrame(freeFrame, pid, pageNumber);
-
-  if (!allocated) {
-    return {
-      success: false,
-      error: 'Failed to allocate frame',
-      pageNumber,
-    };
-  }
-
-  // Actualizar la tabla de páginas
-  PageTable.markPagePresent(pageTable, pageNumber, freeFrame);
-
-  return {
-    success: true,
-    frameNumber: freeFrame,
-    pageNumber,
-    pid,
-  };
+  return result;
 }
 
 /**
@@ -396,4 +381,36 @@ export function getPageSize() {
  */
 export function isProcessRegistered(pid) {
   return processPageTables.has(pid);
+}
+
+/**
+ * Obtiene el historial de reemplazos de páginas
+ * @returns {Array} Historial de eventos de reemplazo
+ */
+export function getReplacementHistory() {
+  return PageFaultHandler.getReplacementHistory();
+}
+
+/**
+ * Obtiene estadísticas de reemplazo de páginas
+ * @returns {object} Estadísticas de reemplazo
+ */
+export function getReplacementStats() {
+  return PageFaultHandler.getReplacementStats();
+}
+
+/**
+ * Obtiene el estado actual del algoritmo Clock
+ * @returns {object} Estado del algoritmo Clock
+ */
+export function getClockState() {
+  return PageFaultHandler.getClockState();
+}
+
+/**
+ * Verifica si la memoria está completamente llena
+ * @returns {boolean} true si no hay marcos libres
+ */
+export function isMemoryFull() {
+  return PageFaultHandler.isMemoryFull();
 }
