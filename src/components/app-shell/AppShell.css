@@ -27,10 +27,12 @@
 .footer-options {
     position: fixed;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     justify-content: space-between;
     width: 75%;
     bottom: 1rem;
+    gap: 1rem;
     margin-left: 1rem;
 }
 

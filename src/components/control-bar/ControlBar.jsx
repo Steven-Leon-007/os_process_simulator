@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useSim } from "../../context/SimulationContext";
 import "./ControlBar.css";
 import InfoPanel from "../info-panel/InfoPanel";
+import MemoryPanel from "../memory-panel/MemoryPanel";
 import useAudio from "../../hooks/useAudio";
 import createProcessSfx from "../../assets/effects/create_process.mp3";
 import { useSound } from "../../context/SoundContext";
@@ -9,7 +10,7 @@ import { useSound } from "../../context/SoundContext";
 const SPEEDS = [6000, 3000, 1666, 1500]; // ms para x0.5, x1.0, x1.5, x2.0
 const SPEED_LABELS = ["x0.5", "x1.0", "x1.5", "x2.0"];
 
-const ControlBar = () => {
+const ControlBar = ({ showMemory = false }) => {
   const { create, speed, setSpeed, mode, setMode, state, pause } = useSim();
   const { soundEnabled } = useSound();
   const playCreate = useAudio(createProcessSfx, soundEnabled);
@@ -127,7 +128,7 @@ const ControlBar = () => {
         )}
       </div>
 
-      <InfoPanel />
+      {showMemory ? <MemoryPanel /> : <InfoPanel />}
     </div>
   );
 };

@@ -28,6 +28,17 @@ export function SimulationProvider({ children }) {
         console.log('Memory initialized:', initialState);
     }, []);
 
+    // Callback para actualizar memoria (se ejecuta desde el reducer)
+    useEffect(() => {
+        const onMemoryChange = () => {
+            const snapshot = Memory.getMemorySnapshot();
+            setMemoryState(snapshot);
+        };
+        
+        // Configurar el callback en el hook de simulación
+        sim.setMemoryCallback(onMemoryChange);
+    }, [sim.setMemoryCallback]);
+
     // Crear procesos automáticamente cada 7 segundos en modo automático
     useEffect(() => {
         if (mode !== 'auto') return;

@@ -5,6 +5,7 @@ import "./AppShell.css";
 import { useSound } from '../../context/SoundContext';
 import { setManualInactivityTimeout } from '../../services/engine';
 import { useSim } from "../../context/SimulationContext";
+import MemoryPanel from '../memory-panel/MemoryPanel';
 
 const INACTIVITY_MIN = 0;
 const INACTIVITY_MAX = 300;
@@ -14,6 +15,8 @@ const INACTIVITY_DEFAULT = 45;
 const AppShell = () => {
   const { soundEnabled, setSoundEnabled } = useSound();
   const [showDetails, setShowDetails] = useState(false);
+  const [showMemory, setShowMemory] = useState(false);
+
   const { reset } = useSim();
 
   const [inactivity, setInactivity] = useState(INACTIVITY_DEFAULT);
@@ -49,10 +52,19 @@ const AppShell = () => {
           />
           <span>Efectos de sonido</span>
         </div>
+        <div className="toggle-container">
+          <input
+            type="checkbox"
+            checked={showMemory}
+            onChange={e => setShowMemory(e.target.checked)}
+            id="toggle-memory"
+          />
+          <span>Mostrar memoria</span>
+        </div>
       </div>
       <div className="main-wrapper">
         <StateDiagram showDetails={showDetails} />
-        <ControlBar />
+        <ControlBar showMemory={showMemory} />
       </div>
       <div className="footer-options">
         <label className="inactivity-slider">

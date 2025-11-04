@@ -216,6 +216,13 @@ export function allocateFramesForProcess(pid, numPages) {
   const failedPages = [];
 
   for (let pageNumber = 0; pageNumber < numPages; pageNumber++) {
+    // Verificar si la página ya está asignada (evitar duplicados en StrictMode)
+    if (PageTable.isPagePresent(pageTable, pageNumber)) {
+      const existingFrame = PageTable.getFrameNumber(pageTable, pageNumber);
+      allocatedFrames.push({ pageNumber, frameNumber: existingFrame });
+      continue;
+    }
+
     // Buscar marco libre
     const freeFrame = Memory.getFreeFrame();
 
