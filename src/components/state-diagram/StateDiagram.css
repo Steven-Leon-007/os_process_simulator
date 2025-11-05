@@ -8,6 +8,10 @@
   width: 60%;
 }
 
+/* Transición suave para los nodos cuando cambian de posición */
+.react-flow__node {
+  transition: left 0.3s ease-in-out, top 0.3s ease-in-out;
+}
 
 .state-node {
   display: flex;

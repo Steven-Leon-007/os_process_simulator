@@ -27,7 +27,7 @@ const nodeTypes = {
 const StateDiagram = ({ showDetails, showMemory }) => {
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
-  const [positions, setPositions] = useState(getPositions(window.innerWidth));
+  const [positions, setPositions] = useState(getPositions(window.innerWidth, showMemory));
   const [positionOverrides, setPositionOverrides] = useState({});
   const [processPositionOverrides, setProcessPositionOverrides] = useState({});
 
@@ -58,12 +58,17 @@ const StateDiagram = ({ showDetails, showMemory }) => {
 
   useEffect(() => {
     const handleResize = () => {
-      setPositions(getPositions(window.innerWidth));
+      setPositions(getPositions(window.innerWidth, showMemory));
     };
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, [showMemory]);
+
+  // Actualizar posiciones cuando cambie showMemory
+  useEffect(() => {
+    setPositions(getPositions(window.innerWidth, showMemory));
+  }, [showMemory]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
