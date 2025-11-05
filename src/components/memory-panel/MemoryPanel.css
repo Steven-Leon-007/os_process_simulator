@@ -4,8 +4,9 @@
   padding: 0.5rem;
   margin-top: 0.5rem;
   overflow-y: auto;
-  width: 95%;
-  scrollbar-width: none;
+  width: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #1d416d transparent;
 }
 
 .memory-panel-header {
@@ -62,7 +63,7 @@
 /* Grid de Frames */
 .memory-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(110px, 1fr));
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
@@ -102,22 +103,6 @@
 .frame.modified {
   background-color: rgba(245, 158, 11, 0.08);
   border-color: rgba(245, 158, 11, 0.4);
-}
-
-/* Clock Pointer - Animación de pulso */
-.frame.clock-pointer {
-  border-color: #ef4444;
-  border-width: 3px;
-  animation: clockPulse 2s ease-in-out infinite;
-}
-
-@keyframes clockPulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
-  }
 }
 
 /* Contenido del Frame */
@@ -169,6 +154,9 @@
   padding: 0.15rem 0.35rem;
   border-radius: 3px;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
 }
 
 .bit-active {
@@ -180,6 +168,7 @@
   background-color: rgba(255, 255, 255, 0.05);
   color: var(--color-text-muted);
 }
+
 
 /* Indicador de Clock */
 .clock-indicator {
@@ -262,7 +251,8 @@
   display: flex;
   gap: 1.5rem;
   justify-content: center;
-  padding-top: 0.75rem;
+  padding-top: 1rem;
+  margin-bottom: 0.5rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   flex-wrap: wrap;
 }
@@ -355,4 +345,11 @@
     gap: 0.1rem;
     align-items: center;
   }
+}
+
+@media screen and (max-width: 500px) {
+    
+    .memory-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }

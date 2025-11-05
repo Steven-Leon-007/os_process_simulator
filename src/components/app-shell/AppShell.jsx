@@ -63,7 +63,7 @@ const AppShell = () => {
         </div>
       </div>
       <div className="main-wrapper">
-        <StateDiagram showDetails={showDetails} />
+        <StateDiagram showDetails={showDetails} showMemory={showMemory} />
         <ControlBar showMemory={showMemory} />
       </div>
       <div className="footer-options">

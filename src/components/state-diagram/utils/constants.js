@@ -1,7 +1,7 @@
 import { admit, assignCPU, ioComplete, preempt, requestIO, STATES, terminate } from "../../../services/fsm";
 
 export const getPositions = (width) => {
-    const finalWidth = width * 0.8; // Limitar ancho máximo para mejor visualización
+    const finalWidth = width * 0.8;
     if (width < 1100) {
         return {
             [STATES.NEW]: { x: 50, y: 30 },
@@ -13,11 +13,11 @@ export const getPositions = (width) => {
     }
 
     return {
-        [STATES.NEW]: { x: finalWidth * 0.05, y: 50 },
-        [STATES.READY]: { x: finalWidth * 0.2, y: 150 },
-        [STATES.RUNNING]: { x: finalWidth * 0.6, y: 150 },
-        [STATES.WAITING]: { x: finalWidth * 0.4, y: 300 },
-        [STATES.TERMINATED]: { x: finalWidth * 0.8, y: 50 },
+        [STATES.NEW]: { x: finalWidth * 0.05, y: 200 },
+        [STATES.READY]: { x: finalWidth * 0.15, y: 300 },
+        [STATES.RUNNING]: { x: finalWidth * 0.5, y: 300 },
+        [STATES.WAITING]: { x: finalWidth * 0.325, y: 450 },
+        [STATES.TERMINATED]: { x: finalWidth * 0.6, y: 200 },
     };
 };
 

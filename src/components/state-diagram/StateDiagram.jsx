@@ -24,7 +24,7 @@ const nodeTypes = {
 };
 // -----------------------------------------------------------------
 
-const StateDiagram = ({ showDetails }) => {
+const StateDiagram = ({ showDetails, showMemory }) => {
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const [positions, setPositions] = useState(getPositions(window.innerWidth));
@@ -193,7 +193,7 @@ const StateDiagram = ({ showDetails }) => {
   };
 
   return (
-    <div className="sd-container">
+    <div className={`sd-container ${showMemory ? 'with-memory' : ''}`}>
       <div
         ref={reactFlowWrapper}
         style={{

@@ -1,13 +1,13 @@
 .sd-container {
   width: 80%;
   height: 500px;
+  transition: width 0.3s ease-in-out;
 }
 
-@media screen and (max-width: 768px) {
-  .sd-container {
-    width: 100%;
-  }
+.sd-container.with-memory {
+  width: 60%;
 }
+
 
 .state-node {
   display: flex;
@@ -143,14 +143,14 @@
 
 
 /* Elementos dentro del tooltip */
-.process-tooltip > div {
+.process-tooltip>div {
   margin-bottom: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.process-tooltip > div:last-child {
+.process-tooltip>div:last-child {
   margin-bottom: 0;
 }
 
@@ -169,7 +169,7 @@
   display: block !important;
 }
 
-.history-section > strong {
+.history-section>strong {
   display: block;
   margin-bottom: 12px;
   color: #81c784;
@@ -197,7 +197,7 @@
   transform: translateX(2px);
 }
 
-.history-item > div:first-child {
+.history-item>div:first-child {
   color: #ffffff;
   font-weight: 500;
   margin-bottom: 4px;
@@ -252,11 +252,9 @@
   right: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.3) 100%
-  );
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.3) 100%);
   animation: shimmer 2s infinite;
 }
 
@@ -264,13 +262,18 @@
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(100%);
   }
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
+  .sd-container, .sd-container.with-memory {
+    width: 100%;
+  }
+
   .process-tooltip {
     min-width: 250px;
     max-width: 320px;
@@ -342,6 +345,7 @@
     opacity: 0;
     transform: translateX(-50%) translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
@@ -358,12 +362,12 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.history-item > div:first-child strong {
+.history-item>div:first-child strong {
   color: #e3f2fd;
 }
 
 /* Estilos para cuando no hay historial */
-.history-section > div:last-child {
+.history-section>div:last-child {
   color: #90a4ae;
   font-style: italic;
   padding: 8px 12px;

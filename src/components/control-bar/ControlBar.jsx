@@ -6,6 +6,7 @@ import MemoryPanel from "../memory-panel/MemoryPanel";
 import useAudio from "../../hooks/useAudio";
 import createProcessSfx from "../../assets/effects/create_process.mp3";
 import { useSound } from "../../context/SoundContext";
+import PageTableView from "../memory-panel/PageTableView";
 
 const SPEEDS = [6000, 3000, 1666, 1500]; // ms para x0.5, x1.0, x1.5, x2.0
 const SPEED_LABELS = ["x0.5", "x1.0", "x1.5", "x2.0"];
@@ -44,20 +45,18 @@ const ControlBar = ({ showMemory = false }) => {
       .flatMap((p) =>
         p.history.length > 0
           ? p.history.map(
-              (h) =>
-                `${p.pid};${h.priority};${h.pc};"${JSON.stringify(
-                  h.cpuRegisters
-                )}";"${JSON.stringify(h.syscalls)}";${h.from};${h.to};${
-                  h.timestamp
-                };${h.cause}`
-            )
+            (h) =>
+              `${p.pid};${h.priority};${h.pc};"${JSON.stringify(
+                h.cpuRegisters
+              )}";"${JSON.stringify(h.syscalls)}";${h.from};${h.to};${h.timestamp
+              };${h.cause}`
+          )
           : [
-              `${p.pid};${p.priority};${p.pc};"${JSON.stringify(
-                p.cpuRegisters
-              )}";"${JSON.stringify(p.syscalls)}";${p.state};${p.state};${
-                p.createdAt
-              };Creado`,
-            ]
+            `${p.pid};${p.priority};${p.pc};"${JSON.stringify(
+              p.cpuRegisters
+            )}";"${JSON.stringify(p.syscalls)}";${p.state};${p.state};${p.createdAt
+            };Creado`,
+          ]
       )
       .join("\n");
     const csvContent = header + rows;
@@ -73,7 +72,7 @@ const ControlBar = ({ showMemory = false }) => {
   }
 
   return (
-    <div className="control-bar">
+    <div className={`control-bar ${showMemory ? 'with-memory' : ''}`}>
       <div className="buttons">
         <div className="upper-buttons">
           <button className="button create-button" onClick={handleCreate}>
@@ -128,7 +127,14 @@ const ControlBar = ({ showMemory = false }) => {
         )}
       </div>
 
-      {showMemory ? <MemoryPanel /> : <InfoPanel />}
+      {showMemory ? (
+        <div className="show-memory-container">
+          <MemoryPanel />
+          <PageTableView />
+        </div>
+      ) : (
+        <InfoPanel />
+      )}
     </div>
   );
 };
