@@ -1,31 +1,80 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import './ClockCenter.css';
 
-const ClockCenter = ({ clockPointer }) => {
-  // Mapeo de frameNumber a ángulo de la manecilla
-  // Grid 4x4 con 12 frames alrededor del centro 2x2
-  // Ángulos calculados para apuntar al centro de cada frame
-  // 0° = derecha, 90° = abajo, -90° = arriba, ±180° = izquierda
-  const frameAngles = {
-    0: -45,  // Frame 0: Top-left diagonal
-    1: -22.5, // Frame 1: Top-center-left
-    2: 22.5, // Frame 2: Top-center-right
-    3: 45,   // Frame 3: Top-right diagonal
-    4: 67.5,   // Frame 4: Right-top
-    5: 112.5,  // Frame 5: Right-bottom
-    6: 135,    // Frame 6: Bottom-right diagonal
-    7: 157.5, // Frame 7: Bottom-center-right
-    8: 202.5,  // Frame 8: Bottom-center-left
-    9: 225,   // Frame 9: Bottom-left diagonal
-    10: 247.5,// Frame 10: Left-bottom
-    11: 292.5,// Frame 11: Left-top
+const ClockCenter = ({ clockPointer, action }) => {
+  // Ángulos base de cada frame (en el rango -180 a 180)
+  const baseFrameAngles = {
+    0: -45,
+    1: -22.5,
+    2: 22.5,
+    3: 45,
+    4: 67.5,
+    5: 112.5,
+    6: 135,
+    7: 157.5,
+    8: 202.5,
+    9: 225,
+    10: 247.5,
+    11: 292.5,
   };
   
+  // Mantener el ángulo acumulado para rotación continua
+  const previousAngleRef = useRef(0);
+  const previousFrameRef = useRef(null);
+  
+  // Calcular el ángulo acumulado para rotación continua
+  let rotation = 0;
+  
+  if (clockPointer !== null && clockPointer !== undefined) {
+    const baseAngle = baseFrameAngles[clockPointer] ?? 0;
+    const prevFrame = previousFrameRef.current;
+    
+    if (prevFrame !== null) {
+      const prevBaseAngle = baseFrameAngles[prevFrame] ?? 0;
+      let angleDiff = baseAngle - prevBaseAngle;
+      
+      // Si el ángulo retrocede (ej: de 292.5° a -45°), añadir 360° para continuar
+      if (angleDiff < -180) {
+        angleDiff += 360;
+      } else if (angleDiff > 180) {
+        angleDiff -= 360;
+      }
+      
+      rotation = previousAngleRef.current + angleDiff;
+    } else {
+      // Primera vez, usar el ángulo base
+      rotation = baseAngle;
+    }
+    
+    previousAngleRef.current = rotation;
+    previousFrameRef.current = clockPointer;
+  } else {
+    rotation = previousAngleRef.current;
+  }
 
-  const rotation = clockPointer !== null && clockPointer !== undefined 
-    ? frameAngles[clockPointer] ?? 0 
-    : 0;
+  // Traducir acciones a texto legible
+  const getActionText = (action) => {
+    switch (action) {
+      case 'evaluating':
+        return 'Evaluando';
+      case 'second_chance':
+        return 'Segunda oportunidad';
+      case 'victim_found':
+        return 'Víctima encontrada';
+      default:
+        return '';
+    }
+  };
+
+  // Velocidad de animación según la acción
+  const getTransitionSpeed = (action) => {
+    if (action === 'victim_found') {
+      return { stiffness: 80, damping: 12, duration: 0.5 };
+    }
+    // Más rápido durante el recorrido
+    return { stiffness: 150, damping: 20, duration: 0.2 };
+  };
 
   return (
     <div className="clock-center">
@@ -73,23 +122,26 @@ const ClockCenter = ({ clockPointer }) => {
           animate={{ rotate: rotation }}
           transition={{
             type: "spring",
-            stiffness: 100,
-            damping: 15,
-            duration: 0.6
+            ...getTransitionSpeed(action)
           }}
         >
           <div className="hand-pointer" />
         </motion.div>
 
-        {/* Etiqueta opcional */}
+        {/* Etiqueta con frame y acción */}
         {clockPointer !== null && clockPointer !== undefined && (
           <motion.div
             className="clock-label"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.2 }}
           >
-            <span className="label-text">Frame {clockPointer}</span>
+            <span className="label-text">
+              Frame {clockPointer}
+              {action && (
+                <span className="action-text">{getActionText(action)}</span>
+              )}
+            </span>
           </motion.div>
         )}
       </div>

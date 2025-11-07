@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSim } from '../../context/SimulationContext';
 import useMemory from '../../hooks/useMemory';
 import MemoryFrame from './MemoryFrame';
 import ClockCenter from './ClockCenter';
@@ -6,6 +7,43 @@ import './MemoryPanel.css';
 
 const MemoryPanel = () => {
   const { frames, totalFrames, usedFrames, freeFrames, clockState } = useMemory();
+  const { getClockSteps, clearClockSteps, memoryState } = useSim();
+  const [animatingFrame, setAnimatingFrame] = useState(null);
+  const [frameAction, setFrameAction] = useState(null);
+
+  // Detectar cambios en memoria y animar los pasos del Clock
+  useEffect(() => {
+    const steps = getClockSteps();
+    
+    if (steps && steps.length > 0) {
+      // Animar cada paso secuencialmente
+      let currentStep = 0;
+
+      const animateNextStep = () => {
+        if (currentStep >= steps.length) {
+          // Terminar animación
+          setTimeout(() => {
+            setAnimatingFrame(null);
+            setFrameAction(null);
+            clearClockSteps();
+          }, 400);
+          return;
+        }
+
+        const step = steps[currentStep];
+        setAnimatingFrame(step.frameNumber);
+        setFrameAction(step.action);
+
+        // Duración según la acción
+        const duration = step.action === 'victim_found' ? 500 : 300;
+        
+        currentStep++;
+        setTimeout(animateNextStep, duration);
+      };
+
+      animateNextStep();
+    }
+  }, [memoryState, getClockSteps, clearClockSteps]);
 
   // Handlers opcionales para eventos de los frames
   const handleFrameClick = (frameNumber, frameData) => {
@@ -58,7 +96,10 @@ const MemoryPanel = () => {
           })}
           
           {/* Reloj en el centro del grid (ocupa 2x2) */}
-          <ClockCenter clockPointer={clockState?.clockPointer} />
+          <ClockCenter 
+            clockPointer={animatingFrame !== null ? animatingFrame : clockState?.clockPointer}
+            action={frameAction}
+          />
         </div>
       </div>
 

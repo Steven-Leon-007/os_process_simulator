@@ -11,6 +11,24 @@ import { getTimestamp } from '../utils/time.js';
 // Historial global de eventos de reemplazo
 let replacementHistory = [];
 
+// Array para almacenar los pasos del algoritmo Clock
+let clockSteps = [];
+
+/**
+ * Obtiene los pasos del último recorrido del algoritmo Clock
+ * @returns {Array} Array de pasos { frameNumber, action }
+ */
+export function getClockSteps() {
+  return [...clockSteps];
+}
+
+/**
+ * Limpia los pasos del algoritmo Clock
+ */
+export function clearClockSteps() {
+  clockSteps = [];
+}
+
 /**
  * Maneja una falla de página (Page Fault)
  * Asigna un marco libre si hay disponible, o invoca el algoritmo Clock si la RAM está llena.
@@ -153,6 +171,15 @@ export function loadPageIntoFrame(pid, pageNumber, frameNumber, pageTable) {
  * @param {Array} newPageTable - Tabla de páginas del proceso que necesita el marco
  * @returns {object} Resultado del reemplazo
  */
+/**
+ * Algoritmo Clock de reemplazo de páginas
+ * Busca una víctima dando "segunda oportunidad" a las páginas con bit de uso = 1
+ * 
+ * @param {string} newPid - ID del proceso que necesita el marco
+ * @param {number} newPageNumber - Número de página a cargar
+ * @param {Array} newPageTable - Tabla de páginas del proceso que necesita el marco
+ * @returns {object} Resultado del reemplazo
+ */
 export function clockReplacement(newPid, newPageNumber, newPageTable) {
   const timestamp = getTimestamp();
   const memSnapshot = Memory.getMemorySnapshot();
@@ -164,13 +191,20 @@ export function clockReplacement(newPid, newPageNumber, newPageTable) {
   let victimFrame = null;
   let clockPointer = Memory.getClockPointer();
 
+  // Limpiar pasos anteriores
+  clockSteps = [];
+
   // Algoritmo Clock: buscar víctima
   while (attempts < maxAttempts) {
     const frame = Memory.getFrame(clockPointer);
 
+    // Registrar que estamos evaluando este frame
+    clockSteps.push({ frameNumber: clockPointer, action: 'evaluating' });
+
     if (!frame || frame.bitPresente === 0) {
       // Marco libre encontrado (no debería llegar aquí, pero por seguridad)
       victimFrame = clockPointer;
+      clockSteps.push({ frameNumber: clockPointer, action: 'victim_found' });
       break;
     }
 
@@ -178,10 +212,12 @@ export function clockReplacement(newPid, newPageNumber, newPageTable) {
     if (frame.bitUso === 0) {
       // Víctima encontrada
       victimFrame = clockPointer;
+      clockSteps.push({ frameNumber: clockPointer, action: 'victim_found' });
       break;
     } else {
       // Dar segunda oportunidad: limpiar bit de uso
       Memory.updateFrameBits(clockPointer, { bitUso: 0 });
+      clockSteps.push({ frameNumber: clockPointer, action: 'second_chance' });
     }
 
     // Avanzar el puntero circularmente
