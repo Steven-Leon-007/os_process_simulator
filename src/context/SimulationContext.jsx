@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import useSimulation from '../hooks/useSimulation';
 import * as engine from '../services/engine.js';
+import * as Memory from '../services/memory.js';
+import * as MMU from '../services/mmu.js';
 
 const SimulationContext = createContext(null)
 
@@ -8,6 +10,34 @@ export function SimulationProvider({ children }) {
     const sim = useSimulation()
     const [mode, setMode] = useState('manual');
     const [speed, setSpeed] = useState(3000);
+    const [memoryState, setMemoryState] = useState(null);
+    const [memoryVersion, setMemoryVersion] = useState(0);
+
+    // Inicializar memoria y MMU al montar el componente
+    useEffect(() => {
+        const TOTAL_FRAMES = 12; // 12 marcos de memoria física (grid 4x4 con centro 2x2 para reloj)
+        const PAGE_SIZE = 4096; // 4KB por página
+        
+        Memory.initializeMemory(TOTAL_FRAMES, PAGE_SIZE);
+        MMU.initializeMMU(PAGE_SIZE);
+        
+        // Inicializar estado de memoria
+        const initialState = Memory.getMemorySnapshot();
+        setMemoryState(initialState);
+        
+        console.log('Memory initialized:', initialState);
+    }, []);
+
+    // Callback para actualizar memoria (se ejecuta desde el reducer)
+    useEffect(() => {
+        const onMemoryChange = () => {
+            const snapshot = Memory.getMemorySnapshot();
+            setMemoryState(snapshot);
+        };
+        
+        // Configurar el callback en el hook de simulación
+        sim.setMemoryCallback(onMemoryChange);
+    }, [sim.setMemoryCallback]);
 
     // Crear procesos automáticamente cada 7 segundos en modo automático
     useEffect(() => {
@@ -23,10 +53,19 @@ export function SimulationProvider({ children }) {
         engine.setProcesses(sim.state.processes);
     }, [sim.state.processes]);
 
+    // Actualizar estado de memoria cuando cambien los procesos
+    useEffect(() => {
+        if (sim.state.processes.length > 0) {
+            updateMemoryState();
+        }
+    }, [sim.state.processes, memoryVersion]);
+
     // Actualiza procesos en la UI cuando el motor los cambie
     useEffect(() => {
         engine.setUpdateCallback((newProcesses) => {
             sim.dispatch({ type: 'SET', payload: { processes: newProcesses } });
+            // Actualizar memoria cuando el motor actualice procesos
+            updateMemoryState();
         });
     }, []);
 
@@ -50,6 +89,65 @@ export function SimulationProvider({ children }) {
         engine.setSpeed(newSpeed);
     };
 
+    // Actualizar estado de memoria desde los servicios
+    const updateMemoryState = () => {
+        const snapshot = Memory.getMemorySnapshot();
+        setMemoryState(snapshot);
+    };
+
+    // Forzar actualización de memoria (para llamadas manuales)
+    const refreshMemory = () => {
+        setMemoryVersion(prev => prev + 1);
+        updateMemoryState();
+    };
+
+    // Obtener snapshot de memoria
+    const getMemorySnapshot = () => {
+        return Memory.getMemorySnapshot();
+    };
+
+    // Obtener estadísticas de memoria de un proceso
+    const getProcessMemoryStats = (pid) => {
+        return MMU.getProcessMemoryStats(pid);
+    };
+
+    // Obtener tabla de páginas de un proceso
+    const getProcessPageTable = (pid) => {
+        return MMU.getProcessPageTable(pid);
+    };
+
+    // Obtener todas las tablas de páginas
+    const getAllPageTables = () => {
+        const pageTables = {};
+        sim.state.processes.forEach(process => {
+            const pageTable = MMU.getProcessPageTable(process.pid);
+            if (pageTable) {
+                pageTables[process.pid] = pageTable;
+            }
+        });
+        return pageTables;
+    };
+
+    // Obtener historial de reemplazos
+    const getReplacementHistory = () => {
+        return MMU.getReplacementHistory();
+    };
+
+    // Obtener estadísticas de reemplazo
+    const getReplacementStats = () => {
+        return MMU.getReplacementStats();
+    };
+
+    // Obtener estado del algoritmo Clock
+    const getClockState = () => {
+        return MMU.getClockState();
+    };
+
+    // Verificar si la memoria está llena
+    const isMemoryFull = () => {
+        return MMU.isMemoryFull();
+    };
+
     return (
         <SimulationContext.Provider value={{
             ...sim,
@@ -58,7 +156,20 @@ export function SimulationProvider({ children }) {
             speed,
             setSpeed: handleSetSpeed,
             pause: engine.pause,
-            reset: engine.reset
+            reset: engine.reset,
+            // Estado de memoria reactivo
+            memoryState,
+            updateMemoryState,
+            refreshMemory,
+            // Funciones de memoria
+            getMemorySnapshot,
+            getProcessMemoryStats,
+            getProcessPageTable,
+            getAllPageTables,
+            getReplacementHistory,
+            getReplacementStats,
+            getClockState,
+            isMemoryFull,
         }}>
             {children}
         </SimulationContext.Provider>

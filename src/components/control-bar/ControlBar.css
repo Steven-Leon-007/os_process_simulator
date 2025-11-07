@@ -3,9 +3,13 @@
     width: 20%;
     flex-direction: column;
     gap: 12px;
-    height: 100vh;
     padding: 1rem 0.5rem 0;
     border-left: 2px dashed var(--color-border);
+    transition: width 0.3s ease-in-out;
+}
+
+.control-bar.with-memory {
+    width: 40%;
 }
 
 .buttons{
@@ -101,6 +105,12 @@
     cursor: pointer;
 }
 
+.show-memory-container{
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
 @media screen and (max-width: 1100px) {
     .control-bar {
         width: 100%;
@@ -121,5 +131,8 @@
         grid-column: 1 / 5;
         width: 100%;
     }
-    
+
+    .control-bar, .control-bar.with-memory {
+        width: 100%;
+    }
 }

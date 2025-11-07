@@ -1,0 +1,374 @@
+.memory-panel {
+  background-color: var(--color-complementary);
+  border-radius: 8px;
+  padding: 0.5rem;
+  margin-top: 0.5rem;
+  overflow-y: auto;
+  width: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #1d416d transparent;
+}
+
+.memory-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  padding-top: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.memory-panel-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
+  color: var(--color-text-primary);
+}
+
+.memory-stats {
+  display: flex;
+  gap: 1rem;
+}
+
+.stat {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.stat-label {
+  color: var(--color-text-muted);
+}
+
+.stat-value {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.stat-value.used {
+  color: #60a5fa;
+}
+
+.stat-value.free {
+  color: #34d399;
+}
+
+/* Contenedor del grid con posición relativa para el overlay */
+.memory-grid-container {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+/* Grid de Frames - 4x4 con reloj en el centro 2x2 */
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  grid-template-rows: repeat(4, minmax(110px, 1fr));
+  gap: 0.75rem;
+}
+
+/* Posicionamiento de los 12 frames alrededor del reloj */
+.memory-grid .frame:nth-child(1) { grid-column: 1; grid-row: 1; }  /* Top-left */
+.memory-grid .frame:nth-child(2) { grid-column: 2; grid-row: 1; }  /* Top-center-left */
+.memory-grid .frame:nth-child(3) { grid-column: 3; grid-row: 1; }  /* Top-center-right */
+.memory-grid .frame:nth-child(4) { grid-column: 4; grid-row: 1; }  /* Top-right */
+
+.memory-grid .frame:nth-child(5) { grid-column: 4; grid-row: 2; }  /* Right-top */
+.memory-grid .frame:nth-child(6) { grid-column: 4; grid-row: 3; }  /* Right-bottom */
+
+.memory-grid .frame:nth-child(7) { grid-column: 4; grid-row: 4; }  /* Bottom-right */
+.memory-grid .frame:nth-child(8) { grid-column: 3; grid-row: 4; }  /* Bottom-center-right */
+.memory-grid .frame:nth-child(9) { grid-column: 2; grid-row: 4; }  /* Bottom-center-left */
+.memory-grid .frame:nth-child(10) { grid-column: 1; grid-row: 4; } /* Bottom-left */
+
+.memory-grid .frame:nth-child(11) { grid-column: 1; grid-row: 3; } /* Left-bottom */
+.memory-grid .frame:nth-child(12) { grid-column: 1; grid-row: 2; } /* Left-top */
+
+/* El reloj ocupa el centro 2x2 (se posiciona en ClockCenter.css) */
+
+/* Frame Individual */
+.frame {
+  position: relative;
+  background-color: var(--color-accent);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 0.5rem;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.frame:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Estados del Frame */
+.frame.free {
+  background-color: rgba(52, 211, 153, 0.08);
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.frame.occupied {
+  background-color: rgba(96, 165, 250, 0.08);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.frame.modified {
+  background-color: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+/* Contenido del Frame */
+.frame-number {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+
+.frame-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0.3rem 0;
+}
+
+.frame-pid {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #60a5fa;
+}
+
+.frame-page {
+  font-size: 0.85rem;
+  color: var(--color-text-primary);
+}
+
+.frame-empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1;
+  color: var(--color-text-muted);
+  font-size: 1.5rem;
+}
+
+/* Bits de Estado */
+.frame-bits {
+  display: flex;
+  gap: 0.3rem;
+  justify-content: center;
+  margin-top: 0.3rem;
+}
+
+.bit {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.35rem;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.bit-active {
+  background-color: #34d399;
+  color: #000;
+}
+
+.bit-inactive {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-muted);
+}
+
+
+/* Indicador de Clock */
+.clock-indicator {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: var(--color-bg-secondary);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+.clock-indicator img{
+  width: 60%;
+}
+
+/* Tooltip */
+.frame-tooltip {
+  position: absolute;
+  top: 50px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  background-color: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  min-width: 140px;
+  pointer-events: none;
+}
+
+.frame-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1a1a1a;
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+}
+
+.tooltip-label {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.tooltip-value {
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.tooltip-divider {
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.1);
+  margin: 0.4rem 0;
+}
+
+/* Leyenda */
+.memory-legend {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  padding-top: 1rem;
+  margin-bottom: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.legend-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.legend-color.free {
+  background-color: rgba(52, 211, 153, 0.3);
+  border-color: rgba(52, 211, 153, 0.5);
+}
+
+.legend-color.occupied {
+  background-color: rgba(96, 165, 250, 0.3);
+  border-color: rgba(96, 165, 250, 0.5);
+}
+
+.legend-color.modified {
+  background-color: rgba(245, 158, 11, 0.3);
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+.legend-icon {
+  font-size: 1.2rem;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .memory-panel {
+    max-height: 50vh;
+    width: 90%;
+    margin: 0.5rem auto 0;
+  }
+
+  .memory-panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .memory-stats {
+    width: 100%;
+    justify-content: space-around;
+  }
+
+  .memory-grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .frame {
+    min-height: 85px;
+    padding: 0.4rem;
+  }
+
+  .frame-tooltip {
+    min-width: 120px;
+    font-size: 0.75rem;
+  }
+
+  .memory-legend {
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+
+    .memory-panel {
+        position: relative;
+    }
+
+  .memory-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .stat {
+    flex-direction: column;
+    gap: 0.1rem;
+    align-items: center;
+  }
+}
+
+@media screen and (max-width: 500px) {
+    
+    .memory-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

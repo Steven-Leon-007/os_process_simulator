@@ -3,9 +3,10 @@
   --color-primary: #131F24;
   --color-secondary: #151e22d2;
   --color-accent: #0e1726;
-  --color-hover: #202F36;
+  --color-hover: #202f36;
   --color-decoration: #1d6826;
   --color-decoration-hover: #1d8b2a;
+  --color-complementary: #151c27;
 
   /* Colores de texto */
   --color-text-primary: #F5F5F5;

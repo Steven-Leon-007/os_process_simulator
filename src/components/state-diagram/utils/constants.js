@@ -1,7 +1,7 @@
 import { admit, assignCPU, ioComplete, preempt, requestIO, STATES, terminate } from "../../../services/fsm";
 
-export const getPositions = (width) => {
-    const finalWidth = width * 0.8; // Limitar ancho máximo para mejor visualización
+export const getPositions = (width, showMemory = false) => {
+    const finalWidth = width * 0.8;
     if (width < 1100) {
         return {
             [STATES.NEW]: { x: 50, y: 30 },
@@ -12,12 +12,17 @@ export const getPositions = (width) => {
         };
     }
 
+    // Desktop: ajustar posiciones según si el panel de memoria está visible
+    // Si showMemory = true, posiciones más compactas (actuales)
+    // Si showMemory = false, posiciones más separadas para aprovechar el espacio
+    const spacingMultiplier = showMemory ? 1 : 1.3;
+
     return {
-        [STATES.NEW]: { x: finalWidth * 0.05, y: 50 },
-        [STATES.READY]: { x: finalWidth * 0.2, y: 150 },
-        [STATES.RUNNING]: { x: finalWidth * 0.6, y: 150 },
-        [STATES.WAITING]: { x: finalWidth * 0.4, y: 300 },
-        [STATES.TERMINATED]: { x: finalWidth * 0.8, y: 50 },
+        [STATES.NEW]: { x: finalWidth * 0.05 * spacingMultiplier, y: 200 },
+        [STATES.READY]: { x: finalWidth * 0.15 * spacingMultiplier, y: 300 },
+        [STATES.RUNNING]: { x: finalWidth * 0.5 * spacingMultiplier, y: 300 },
+        [STATES.WAITING]: { x: finalWidth * 0.325 * spacingMultiplier, y: 450 },
+        [STATES.TERMINATED]: { x: finalWidth * 0.6 * spacingMultiplier, y: 200 },
     };
 };
 
