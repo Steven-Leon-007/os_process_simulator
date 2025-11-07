@@ -60,13 +60,38 @@
   color: #34d399;
 }
 
-/* Grid de Frames */
+/* Contenedor del grid con posición relativa para el overlay */
+.memory-grid-container {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+/* Grid de Frames - 4x4 con reloj en el centro 2x2 */
 .memory-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(110px, 1fr));
+  grid-template-rows: repeat(4, minmax(110px, 1fr));
   gap: 0.75rem;
-  margin-bottom: 1rem;
 }
+
+/* Posicionamiento de los 12 frames alrededor del reloj */
+.memory-grid .frame:nth-child(1) { grid-column: 1; grid-row: 1; }  /* Top-left */
+.memory-grid .frame:nth-child(2) { grid-column: 2; grid-row: 1; }  /* Top-center-left */
+.memory-grid .frame:nth-child(3) { grid-column: 3; grid-row: 1; }  /* Top-center-right */
+.memory-grid .frame:nth-child(4) { grid-column: 4; grid-row: 1; }  /* Top-right */
+
+.memory-grid .frame:nth-child(5) { grid-column: 4; grid-row: 2; }  /* Right-top */
+.memory-grid .frame:nth-child(6) { grid-column: 4; grid-row: 3; }  /* Right-bottom */
+
+.memory-grid .frame:nth-child(7) { grid-column: 4; grid-row: 4; }  /* Bottom-right */
+.memory-grid .frame:nth-child(8) { grid-column: 3; grid-row: 4; }  /* Bottom-center-right */
+.memory-grid .frame:nth-child(9) { grid-column: 2; grid-row: 4; }  /* Bottom-center-left */
+.memory-grid .frame:nth-child(10) { grid-column: 1; grid-row: 4; } /* Bottom-left */
+
+.memory-grid .frame:nth-child(11) { grid-column: 1; grid-row: 3; } /* Left-bottom */
+.memory-grid .frame:nth-child(12) { grid-column: 1; grid-row: 2; } /* Left-top */
+
+/* El reloj ocupa el centro 2x2 (se posiciona en ClockCenter.css) */
 
 /* Frame Individual */
 .frame {
@@ -175,25 +200,19 @@
   position: absolute;
   top: -8px;
   right: -8px;
-  background-color: #ef4444;
+  background-color: var(--color-bg-secondary);
   border-radius: 50%;
   width: 28px;
   height: 28px;
+  border: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
-  animation: clockRotate 4s linear infinite;
 }
 
-@keyframes clockRotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+
+.clock-indicator img{
+  width: 60%;
 }
 
 /* Tooltip */

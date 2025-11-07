@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import useMemory from '../../hooks/useMemory';
 import MemoryFrame from './MemoryFrame';
+import ClockCenter from './ClockCenter';
 import './MemoryPanel.css';
 
 const MemoryPanel = () => {
@@ -35,25 +36,30 @@ const MemoryPanel = () => {
         </div>
       </div>
 
-      <div className="memory-grid">
-        {frames.map((frame) => {
-          const isClockPointer = clockState?.pointer === frame.frameNumber;
+      <div className="memory-grid-container">
+        <div className="memory-grid">
+          {frames.map((frame, index) => {
+            const isClockPointer = clockState?.clockPointer === frame.frameNumber;
 
-          return (
-            <MemoryFrame
-              key={frame.frameNumber}
-              frameNumber={frame.frameNumber}
-              pid={frame.pid}
-              pageNumber={frame.pageNumber}
-              bitUso={frame.bitUso}
-              bitPresente={frame.bitPresente}
-              bitModificado={frame.bitModificado}
-              isClockPointer={isClockPointer}
-              onClick={handleFrameClick}
-              onHover={handleFrameHover}
-            />
-          );
-        })}
+            return (
+              <MemoryFrame
+                key={frame.frameNumber}
+                frameNumber={frame.frameNumber}
+                pid={frame.pid}
+                pageNumber={frame.pageNumber}
+                bitUso={frame.bitUso}
+                bitPresente={frame.bitPresente}
+                bitModificado={frame.bitModificado}
+                isClockPointer={isClockPointer}
+                onClick={handleFrameClick}
+                onHover={handleFrameHover}
+              />
+            );
+          })}
+          
+          {/* Reloj en el centro del grid (ocupa 2x2) */}
+          <ClockCenter clockPointer={clockState?.clockPointer} />
+        </div>
       </div>
 
       <div className="memory-legend">

@@ -15,7 +15,7 @@ export function SimulationProvider({ children }) {
 
     // Inicializar memoria y MMU al montar el componente
     useEffect(() => {
-        const TOTAL_FRAMES = 16; // 16 marcos de memoria física
+        const TOTAL_FRAMES = 12; // 12 marcos de memoria física (grid 4x4 con centro 2x2 para reloj)
         const PAGE_SIZE = 4096; // 4KB por página
         
         Memory.initializeMemory(TOTAL_FRAMES, PAGE_SIZE);

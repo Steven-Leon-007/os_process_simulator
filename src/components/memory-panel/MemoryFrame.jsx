@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './MemoryPanel.css';
+import ClockImage from "../../assets/clock_image.png";
 
 /**
  * Genera un color basado en el PID del proceso
@@ -117,7 +118,7 @@ const MemoryFrame = ({
       {/* Indicador del Clock Pointer */}
       {isClockPointer && (
         <div className="clock-indicator">
-          <span>🕐</span>
+          <img src={ClockImage} alt="Clock Indicator" />
         </div>
       )}
 
