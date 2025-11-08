@@ -5,11 +5,16 @@ import './PageTableView.css';
 
 /**
  * Componente que visualiza la tabla de páginas de un proceso seleccionado
+ * @param {string} selectedPid - PID del proceso seleccionado externamente (opcional)
+ * @param {function} onProcessSelect - Callback cuando se selecciona un proceso (opcional)
  */
-const PageTableView = () => {
+const PageTableView = ({ selectedPid: externalSelectedPid, onProcessSelect }) => {
   const { state } = useSim();
   const { getPageTable } = useMemory();
-  const [selectedPid, setSelectedPid] = useState(null);
+  const [internalSelectedPid, setInternalSelectedPid] = useState(null);
+
+  // Usar el PID externo si está disponible, sino usar el interno
+  const selectedPid = externalSelectedPid || internalSelectedPid;
 
   // Obtener la tabla de páginas del proceso seleccionado
   const pageTable = selectedPid ? getPageTable(selectedPid) : null;
@@ -18,7 +23,13 @@ const PageTableView = () => {
   const selectedProcess = state.processes.find(p => p.pid === selectedPid);
 
   const handleProcessSelect = (e) => {
-    setSelectedPid(e.target.value || null);
+    const newPid = e.target.value || null;
+    setInternalSelectedPid(newPid);
+    
+    // Notificar al componente padre si existe el callback
+    if (onProcessSelect) {
+      onProcessSelect(newPid);
+    }
   };
 
   return (

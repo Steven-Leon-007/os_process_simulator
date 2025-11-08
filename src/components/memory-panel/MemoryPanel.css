@@ -106,12 +106,14 @@
   justify-content: space-between;
   transition: all 0.3s ease;
   cursor: pointer;
+  z-index: 2;
 }
 
 .frame:hover {
   border-color: rgba(255, 255, 255, 0.3);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
+  z-index: 10000;
 }
 
 /* Estados del Frame */
@@ -226,9 +228,9 @@
   border-radius: 6px;
   padding: 0.5rem 0.75rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  z-index: 1000;
-  min-width: 140px;
+  z-index: 9999;
   pointer-events: none;
+  white-space: nowrap;
 }
 
 .frame-tooltip::after {

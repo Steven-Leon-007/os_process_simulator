@@ -6,6 +6,7 @@ import { useSound } from '../../context/SoundContext';
 import { setManualInactivityTimeout } from '../../services/engine';
 import { useSim } from "../../context/SimulationContext";
 import MemoryPanel from '../memory-panel/MemoryPanel';
+import PageTableModal from '../memory-panel/PageTableModal';
 
 const INACTIVITY_MIN = 0;
 const INACTIVITY_MAX = 300;
@@ -16,6 +17,8 @@ const AppShell = () => {
   const { soundEnabled, setSoundEnabled } = useSound();
   const [showDetails, setShowDetails] = useState(false);
   const [showMemory, setShowMemory] = useState(false);
+  const [selectedPid, setSelectedPid] = useState(null);
+  const [modalPid, setModalPid] = useState(null);
 
   const { reset } = useSim();
 
@@ -25,6 +28,15 @@ const AppShell = () => {
     const value = Number(e.target.value);
     setInactivity(value);
     setManualInactivityTimeout(value === 0 ? Infinity : value * 1000);
+  };
+
+  const handleSelectProcess = (pid) => {
+    setSelectedPid(pid);
+    setModalPid(pid);
+  };
+
+  const handleCloseModal = () => {
+    setModalPid(null);
   };
 
   return (
@@ -63,8 +75,16 @@ const AppShell = () => {
         </div>
       </div>
       <div className="main-wrapper">
-        <StateDiagram showDetails={showDetails} showMemory={showMemory} />
-        <ControlBar showMemory={showMemory} />
+        <StateDiagram 
+          showDetails={showDetails} 
+          showMemory={showMemory}
+          onSelectProcess={handleSelectProcess}
+        />
+        <ControlBar 
+          showMemory={showMemory}
+          selectedPid={selectedPid}
+          onSelectProcess={setSelectedPid}
+        />
       </div>
       <div className="footer-options">
         <label className="inactivity-slider">
@@ -86,6 +106,14 @@ const AppShell = () => {
           Limpiar procesos
         </button>
       </div>
+
+      {/* Modal para mostrar tabla de páginas */}
+      {modalPid && (
+        <PageTableModal 
+          pid={modalPid} 
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   );
 };
