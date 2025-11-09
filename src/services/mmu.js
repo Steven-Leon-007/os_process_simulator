@@ -7,6 +7,7 @@
 import * as Memory from './memory.js';
 import * as PageTable from './pageTable.js';
 import * as PageFaultHandler from './pageFaultHandler.js';
+import * as Disk from './disk.js';
 
 // Almacén de tablas de páginas por proceso
 const processPageTables = new Map();
@@ -46,6 +47,7 @@ export function registerProcess(pid, numPages) {
 
 /**
  * Elimina el registro de un proceso y libera sus recursos
+ * Incluye liberación de páginas en disco (swap space)
  * @param {string} pid - ID del proceso
  * @returns {boolean} true si se eliminó correctamente
  */
@@ -53,6 +55,9 @@ export function unregisterProcess(pid) {
   if (!processPageTables.has(pid)) {
     return false;
   }
+
+  // Liberar páginas del disco
+  Disk.freePagesByPID(pid);
 
   processPageTables.delete(pid);
   return true;
@@ -148,9 +153,9 @@ export function translateAddress(pid, logicalAddress) {
  * Utiliza el PageFaultHandler para gestionar la asignación y reemplazo
  * @param {string} pid - ID del proceso
  * @param {number} pageNumber - Número de página que causó el fallo
- * @returns {object} Resultado del manejo de la falla
+ * @returns {Promise<object>} Resultado del manejo de la falla
  */
-export function handlePageFault(pid, pageNumber) {
+export async function handlePageFault(pid, pageNumber) {
   const pageTable = processPageTables.get(pid);
 
   if (!pageTable) {
@@ -170,7 +175,7 @@ export function handlePageFault(pid, pageNumber) {
 
   // Ejecutar callback personalizado si existe
   if (mmuConfig.onPageFault) {
-    const callbackResult = mmuConfig.onPageFault(pid, pageNumber);
+    const callbackResult = await mmuConfig.onPageFault(pid, pageNumber);
     return {
       success: true,
       handled: true,
@@ -180,7 +185,7 @@ export function handlePageFault(pid, pageNumber) {
   }
 
   // Usar el PageFaultHandler para manejar el page fault
-  const result = PageFaultHandler.handlePageFault(pid, pageNumber, pageTable);
+  const result = await PageFaultHandler.handlePageFault(pid, pageNumber, pageTable);
 
   // Si hubo reemplazo y se requiere actualizar la tabla de la víctima
   if (result.success && result.replacement && result.requiresVictimTableUpdate) {
@@ -252,6 +257,7 @@ export function allocateFramesForProcess(pid, numPages) {
 
 /**
  * Libera todos los marcos de memoria asignados a un proceso
+ * También libera las páginas del disco
  * @param {string} pid - ID del proceso
  * @returns {object} Resultado de la liberación
  */
@@ -281,10 +287,14 @@ export function freeFramesOfProcess(pid) {
     }
   });
 
+  // Liberar páginas del disco
+  const diskResult = Disk.freePagesByPID(pid);
+
   return {
     success: true,
     freedFrames,
     count: freedFrames.length,
+    diskPagesFreed: diskResult.pagesFreed,
     pid,
   };
 }
@@ -435,4 +445,28 @@ export function clearClockSteps() {
  */
 export function isMemoryFull() {
   return PageFaultHandler.isMemoryFull();
+}
+
+/**
+ * Obtiene las estadísticas de operaciones del disco
+ * @returns {object} Estadísticas del disco
+ */
+export function getDiskStats() {
+  return Disk.getDiskStats();
+}
+
+/**
+ * Obtiene el historial de operaciones del disco
+ * @returns {Array} Historial de operaciones de disco
+ */
+export function getDiskOperations() {
+  return Disk.getDiskOperations();
+}
+
+/**
+ * Obtiene el snapshot del swap space
+ * @returns {object} Estado del swap space
+ */
+export function getSwapSnapshot() {
+  return Disk.getSwapSnapshot();
 }
