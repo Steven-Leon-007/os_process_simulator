@@ -121,22 +121,26 @@ function transition(process, toState, cause = "manual") {
     process.pc += 1;
     process.cpuRegisters["AX"] = (process.cpuRegisters["AX"] || 0) + 10;
     process.syscalls.push({ type: "CPU_ASSIGN", at: now });
-
+    
     // Simular accesos a memoria cuando el proceso está en ejecución
-    const memoryAccessResult = simulateMemoryAccess(process);
-    if (memoryAccessResult) {
-      // Si hubo un page fault, registrarlo
-      if (memoryAccessResult.pageFault) {
-        process.memory.pageFaults += 1;
-        process.syscalls.push({
-          type: "PAGE_FAULT",
-          at: now,
-          pageNumber: memoryAccessResult.pageNumber,
-          handled: memoryAccessResult.handled,
-        });
+    // Hacerlo de forma no bloqueante (fire-and-forget)
+    simulateMemoryAccess(process).then(memoryAccessResult => {
+      if (memoryAccessResult) {
+        // Si hubo un page fault, registrarlo
+        if (memoryAccessResult.pageFault) {
+          process.memory.pageFaults += 1;
+          process.syscalls.push({
+            type: "PAGE_FAULT",
+            at: getTimestamp(),
+            pageNumber: memoryAccessResult.pageNumber,
+            handled: memoryAccessResult.handled,
+          });
+        }
+        process.memory.memoryAccesses += 1;
       }
-      process.memory.memoryAccesses += 1;
-    }
+    }).catch(err => {
+      console.error('Error in memory access simulation:', err);
+    });
   }
   if (toState === STATES.WAITING) {
     process.cpuRegisters["IO_WAIT"] = now;
@@ -266,9 +270,9 @@ export function terminate(process, cause) {
  * Genera una dirección lógica aleatoria y la traduce usando la MMU
  *
  * @param {object} process Proceso que accede a memoria
- * @returns {object|null} Resultado del acceso a memoria o null si hay error
+ * @returns {Promise<object|null>} Resultado del acceso a memoria o null si hay error
  */
-function simulateMemoryAccess(process) {
+async function simulateMemoryAccess(process) {
   if (!process.memory) {
     return null;
   }
@@ -296,10 +300,10 @@ function simulateMemoryAccess(process) {
 
   if (translationResult.pageFault) {
     // Page Fault detectado - intentar manejarlo
-    const faultResult = MMU.handlePageFault(process.pid, translationResult.pageNumber);
+    const faultResult = await MMU.handlePageFault(process.pid, translationResult.pageNumber);
 
     return {
-      success: false,
+      success: faultResult.success,
       pageFault: true,
       pageNumber: translationResult.pageNumber,
       logicalAddress,
@@ -323,9 +327,9 @@ function simulateMemoryAccess(process) {
  *
  * @param {object} process Proceso que accede a memoria
  * @param {number} logicalAddress Dirección lógica a acceder
- * @returns {object} Resultado del acceso incluyendo posibles page faults
+ * @returns {Promise<object>} Resultado del acceso incluyendo posibles page faults
  */
-export function accessMemory(process, logicalAddress) {
+export async function accessMemory(process, logicalAddress) {
   const pageSize = MMU.getPageSize();
   const pageNumber = Math.floor(logicalAddress / pageSize);
 
@@ -350,7 +354,7 @@ export function accessMemory(process, logicalAddress) {
     // Page Fault - intentar manejarlo
     process.memory.pageFaults += 1;
 
-    const faultResult = MMU.handlePageFault(process.pid, pageNumber);
+    const faultResult = await MMU.handlePageFault(process.pid, pageNumber);
 
     // Registrar en syscalls
     const now = getTimestamp();

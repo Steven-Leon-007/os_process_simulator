@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import * as fsm from "../services/fsm.js";
 import * as Memory from "../services/memory.js";
 import * as MMU from "../services/mmu.js";
+import * as Disk from "../services/disk.js";
 import { resetPID } from "../services/pidGenerator.js";
 
 describe("Memory Integration with FSM", () => {
@@ -14,6 +15,7 @@ describe("Memory Integration with FSM", () => {
     resetPID();
     Memory.resetMemory();
     MMU.resetMMU();
+    Disk.initializeDisk(0, false); // Deshabilitar delay de I/O para tests
 
     // Inicializar memoria y MMU
     Memory.initializeMemory(16, 4096); // 16 marcos, 4KB por página
@@ -58,11 +60,11 @@ describe("Memory Integration with FSM", () => {
   });
 
   describe("Memory Access", () => {
-    it("should successfully access loaded page", () => {
+    it("should successfully access loaded page", async () => {
       const process = fsm.createProcess("001", 5, 4, 4); // Cargar todas las páginas
       
       // Acceder a dirección en la primera página (0-4095)
-      const result = fsm.accessMemory(process, 100);
+      const result = await fsm.accessMemory(process, 100);
 
       if (process.memory.loadedPages > 0) {
         expect(result.success).toBe(true);
@@ -71,11 +73,11 @@ describe("Memory Integration with FSM", () => {
       }
     });
 
-    it("should detect page fault for non-loaded page", () => {
+    it("should detect page fault for non-loaded page", async () => {
       const process = fsm.createProcess("001", 5, 4, 0); // No cargar páginas
       
       // Acceder a dirección en la primera página
-      const result = fsm.accessMemory(process, 100);
+      const result = await fsm.accessMemory(process, 100);
 
       expect(result.pageFault).toBe(true);
       expect(process.memory.pageFaults).toBeGreaterThan(0);
@@ -85,11 +87,11 @@ describe("Memory Integration with FSM", () => {
       expect(pageFaultSyscall).toBeDefined();
     });
 
-    it("should increment memory access counter", () => {
+    it("should increment memory access counter", async () => {
       const process = fsm.createProcess("001", 5, 4, 2);
       const initialAccesses = process.memory.memoryAccesses;
 
-      fsm.accessMemory(process, 100);
+      await fsm.accessMemory(process, 100);
       
       expect(process.memory.memoryAccesses).toBe(initialAccesses + 1);
     });

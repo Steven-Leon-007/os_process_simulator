@@ -150,15 +150,15 @@ export default function useSimulation() {
   );
 
   const accessMemory = useCallback(
-    (pid, logicalAddress) => {
+    async (pid, logicalAddress) => {
       const proc = state.processes.find((p) => p.pid === pid);
       if (!proc) throw new Error("PID no encontrado");
       
       // Crear copia del proceso
       const procCopy = { ...proc };
       
-      // Acceder a memoria
-      const result = fsm.accessMemory(procCopy, logicalAddress);
+      // Acceder a memoria (ahora es async)
+      const result = await fsm.accessMemory(procCopy, logicalAddress);
       
       // Actualizar el proceso con los cambios (incremento de contadores, etc.)
       dispatch({ type: "UPDATE_PROCESS", pid, process: procCopy });
