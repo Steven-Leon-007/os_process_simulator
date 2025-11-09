@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import StateDiagram from "../state-diagram/StateDiagram";
 import ControlBar from "../control-bar/ControlBar";
 import "./AppShell.css";
@@ -7,6 +7,7 @@ import { setManualInactivityTimeout } from '../../services/engine';
 import { useSim } from "../../context/SimulationContext";
 import MemoryPanel from '../memory-panel/MemoryPanel';
 import PageTableModal from '../memory-panel/PageTableModal';
+import SwapAnimationOverlay from '../memory-panel/SwapAnimationOverlay';
 
 const INACTIVITY_MIN = 0;
 const INACTIVITY_MAX = 300;
@@ -18,11 +19,43 @@ const AppShell = () => {
   const [showDetails, setShowDetails] = useState(false);
   const [showMemory, setShowMemory] = useState(false);
   const [selectedPid, setSelectedPid] = useState(null);
+  const [replacementHistory, setReplacementHistory] = useState([]);
+  const [pendingSwapAnimation, setPendingSwapAnimation] = useState(null);
   const [modalPid, setModalPid] = useState(null);
 
-  const { reset } = useSim();
+  const { reset, getReplacementHistory, memoryState, getClockSteps } = useSim();
 
   const [inactivity, setInactivity] = useState(INACTIVITY_DEFAULT);
+
+  // Detectar nuevos eventos de reemplazo y esperar a que el Clock termine
+  useEffect(() => {
+    const history = getReplacementHistory();
+    const steps = getClockSteps();
+    
+    // Si hay un nuevo evento de reemplazo (con algoritmo Clock)
+    if (history.length > replacementHistory.length) {
+      const newEvent = history[history.length - 1];
+      
+      // Si es un reemplazo con Clock, esperar a que la animación del Clock termine
+      if (newEvent.type === 'PAGE_REPLACEMENT' && steps && steps.length > 0) {
+        setPendingSwapAnimation(newEvent);
+      } else {
+        // Si es una carga simple (PAGE_LOAD), mostrar inmediatamente
+        setReplacementHistory(history);
+      }
+    } else {
+      setReplacementHistory(history);
+    }
+  }, [memoryState, getReplacementHistory, getClockSteps]);
+
+  // Callback cuando la animación del Clock termina
+  const handleClockAnimationComplete = () => {
+    if (pendingSwapAnimation) {
+      // Agregar el evento pendiente al historial para mostrar la animación
+      setReplacementHistory(prev => [...prev, pendingSwapAnimation]);
+      setPendingSwapAnimation(null);
+    }
+  };
 
   const handleInactivityChange = (e) => {
     const value = Number(e.target.value);
@@ -84,6 +117,7 @@ const AppShell = () => {
           showMemory={showMemory}
           selectedPid={selectedPid}
           onSelectProcess={setSelectedPid}
+          onClockAnimationComplete={handleClockAnimationComplete}
         />
       </div>
       <div className="footer-options">
@@ -114,6 +148,9 @@ const AppShell = () => {
           onClose={handleCloseModal}
         />
       )}
+
+      {/* Overlay de animaciones de swap - siempre visible */}
+      <SwapAnimationOverlay replacementHistory={replacementHistory} />
     </div>
   );
 };

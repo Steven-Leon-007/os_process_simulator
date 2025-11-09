@@ -76,6 +76,20 @@ export function handlePageFault(pid, pageNumber, pageTable) {
     const loadResult = loadPageIntoFrame(pid, pageNumber, freeFrame, pageTable);
     
     if (loadResult.success) {
+      // Registrar evento de carga sin reemplazo
+      const loadEvent = {
+        timestamp: loadResult.timestamp,
+        type: 'PAGE_LOAD',
+        loaded: {
+          pid,
+          pageNumber,
+          frameNumber: freeFrame,
+        },
+        replacement: false,
+      };
+      
+      replacementHistory.push(loadEvent);
+
       return {
         success: true,
         frameNumber: freeFrame,
@@ -344,12 +358,17 @@ export function getReplacementHistory() {
  */
 export function getReplacementStats() {
   const total = replacementHistory.length;
-  const dirtyReplacements = replacementHistory.filter(e => e.victim.wasDirty).length;
-  const cleanReplacements = total - dirtyReplacements;
+  
+  // Filtrar solo eventos de reemplazo (que tienen victim)
+  const replacements = replacementHistory.filter(e => e.type === 'PAGE_REPLACEMENT');
+  const loads = replacementHistory.filter(e => e.type === 'PAGE_LOAD');
+  
+  const dirtyReplacements = replacements.filter(e => e.victim?.wasDirty).length;
+  const cleanReplacements = replacements.length - dirtyReplacements;
 
-  // Calcular promedio de intentos del algoritmo Clock
-  const avgAttempts = total > 0
-    ? replacementHistory.reduce((sum, e) => sum + e.attempts, 0) / total
+  // Calcular promedio de intentos del algoritmo Clock (solo para reemplazos)
+  const avgAttempts = replacements.length > 0
+    ? replacements.reduce((sum, e) => sum + (e.attempts || 0), 0) / replacements.length
     : 0;
 
   // Contar reemplazos por proceso
@@ -357,12 +376,18 @@ export function getReplacementStats() {
   const loadsByProcess = {};
 
   replacementHistory.forEach(event => {
-    victimsByProcess[event.victim.pid] = (victimsByProcess[event.victim.pid] || 0) + 1;
-    loadsByProcess[event.loaded.pid] = (loadsByProcess[event.loaded.pid] || 0) + 1;
+    if (event.victim) {
+      victimsByProcess[event.victim.pid] = (victimsByProcess[event.victim.pid] || 0) + 1;
+    }
+    if (event.loaded) {
+      loadsByProcess[event.loaded.pid] = (loadsByProcess[event.loaded.pid] || 0) + 1;
+    }
   });
 
   return {
-    totalReplacements: total,
+    totalEvents: total,
+    totalReplacements: replacements.length,
+    totalLoads: loads.length,
     dirtyReplacements,
     cleanReplacements,
     averageClockAttempts: avgAttempts.toFixed(2),

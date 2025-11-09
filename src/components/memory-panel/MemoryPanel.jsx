@@ -5,7 +5,7 @@ import MemoryFrame from './MemoryFrame';
 import ClockCenter from './ClockCenter';
 import './MemoryPanel.css';
 
-const MemoryPanel = () => {
+const MemoryPanel = ({ onClockAnimationComplete }) => {
   const { frames, totalFrames, usedFrames, freeFrames, clockState } = useMemory();
   const { getClockSteps, clearClockSteps, memoryState } = useSim();
   const [animatingFrame, setAnimatingFrame] = useState(null);
@@ -26,6 +26,11 @@ const MemoryPanel = () => {
             setAnimatingFrame(null);
             setFrameAction(null);
             clearClockSteps();
+            
+            // Notificar que la animación del Clock terminó
+            if (onClockAnimationComplete) {
+              onClockAnimationComplete();
+            }
           }, 400);
           return;
         }
@@ -43,7 +48,7 @@ const MemoryPanel = () => {
 
       animateNextStep();
     }
-  }, [memoryState, getClockSteps, clearClockSteps]);
+  }, [memoryState, getClockSteps, clearClockSteps, onClockAnimationComplete]);
 
   // Handlers opcionales para eventos de los frames
   const handleFrameClick = (frameNumber, frameData) => {

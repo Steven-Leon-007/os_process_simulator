@@ -11,7 +11,7 @@ import PageTableView from "../memory-panel/PageTableView";
 const SPEEDS = [6000, 3000, 1666, 1500]; // ms para x0.5, x1.0, x1.5, x2.0
 const SPEED_LABELS = ["x0.5", "x1.0", "x1.5", "x2.0"];
 
-const ControlBar = ({ showMemory = false, selectedPid, onSelectProcess }) => {
+const ControlBar = ({ showMemory = false, selectedPid, onSelectProcess, onClockAnimationComplete }) => {
   const { create, speed, setSpeed, mode, setMode, state, pause } = useSim();
   const { soundEnabled } = useSound();
   const playCreate = useAudio(createProcessSfx, soundEnabled);
@@ -129,7 +129,7 @@ const ControlBar = ({ showMemory = false, selectedPid, onSelectProcess }) => {
 
       {showMemory ? (
         <div className="show-memory-container">
-          <MemoryPanel />
+          <MemoryPanel onClockAnimationComplete={onClockAnimationComplete} />
           <PageTableView 
             selectedPid={selectedPid}
             onProcessSelect={onSelectProcess}
