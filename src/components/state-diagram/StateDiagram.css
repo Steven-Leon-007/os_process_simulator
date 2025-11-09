@@ -1,6 +1,6 @@
 .sd-container {
   width: 80%;
-  height: 500px;
+  height: 700px;
   transition: width 0.3s ease-in-out;
 }
 
@@ -85,6 +85,7 @@
   z-index: 999;
   transform: translate(-8px, 8px);
   min-width: 120px;
+  padding-bottom: 0.5rem;
 }
 
 .process-menu .menu-title {
@@ -95,7 +96,7 @@
 .menu-actions {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.5rem;
 }
 
 .menu-btn {
@@ -105,10 +106,21 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 13px;
+  transition: all 0.2s ease;
 }
 
 .menu-btn:hover {
   background: #e5e7eb;
+}
+
+.menu-btn-info {
+  font-weight: 500;
+  color: white;
+  padding-bottom: 8px;
+}
+
+.menu-btn-info:hover {
+  background: rgb(183, 9, 252) !important;
 }
 
 .menu-empty {

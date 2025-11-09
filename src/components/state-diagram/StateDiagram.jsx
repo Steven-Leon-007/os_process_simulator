@@ -24,7 +24,7 @@ const nodeTypes = {
 };
 // -----------------------------------------------------------------
 
-const StateDiagram = ({ showDetails, showMemory }) => {
+const StateDiagram = ({ showDetails, showMemory, onSelectProcess }) => {
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const [positions, setPositions] = useState(getPositions(window.innerWidth, showMemory));
@@ -197,13 +197,18 @@ const StateDiagram = ({ showDetails, showMemory }) => {
     }
   };
 
+  const handleViewPageTable = (pid) => {
+    setMenu(null);
+    onSelectProcess?.(pid);
+  };
+
   return (
     <div className={`sd-container ${showMemory ? 'with-memory' : ''}`}>
       <div
         ref={reactFlowWrapper}
         style={{
           width: "100%",
-          height: "500px",
+          height: "700px",
           borderRadius: "8px",
           position: "relative",
           overflow: "hidden",
@@ -249,6 +254,7 @@ const StateDiagram = ({ showDetails, showMemory }) => {
           simState={simState}
           ACTIONS_BY_STATE={ACTIONS_BY_STATE}
           handleAction={handleAction}
+          onViewPageTable={handleViewPageTable}
         />
       </div>
     </div>

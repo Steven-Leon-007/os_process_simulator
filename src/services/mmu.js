@@ -415,6 +415,21 @@ export function getClockState() {
 }
 
 /**
+ * Obtiene los pasos del último recorrido del algoritmo Clock
+ * @returns {Array} Array de pasos { frameNumber, action }
+ */
+export function getClockSteps() {
+  return PageFaultHandler.getClockSteps();
+}
+
+/**
+ * Limpia los pasos del algoritmo Clock
+ */
+export function clearClockSteps() {
+  return PageFaultHandler.clearClockSteps();
+}
+
+/**
  * Verifica si la memoria está completamente llena
  * @returns {boolean} true si no hay marcos libres
  */

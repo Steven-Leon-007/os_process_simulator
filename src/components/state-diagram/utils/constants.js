@@ -18,11 +18,11 @@ export const getPositions = (width, showMemory = false) => {
     const spacingMultiplier = showMemory ? 1 : 1.3;
 
     return {
-        [STATES.NEW]: { x: finalWidth * 0.05 * spacingMultiplier, y: 200 },
-        [STATES.READY]: { x: finalWidth * 0.15 * spacingMultiplier, y: 300 },
-        [STATES.RUNNING]: { x: finalWidth * 0.5 * spacingMultiplier, y: 300 },
-        [STATES.WAITING]: { x: finalWidth * 0.325 * spacingMultiplier, y: 450 },
-        [STATES.TERMINATED]: { x: finalWidth * 0.6 * spacingMultiplier, y: 200 },
+        [STATES.NEW]: { x: finalWidth * 0.05 * spacingMultiplier, y: 100 },
+        [STATES.READY]: { x: finalWidth * 0.15 * spacingMultiplier, y: 200 },
+        [STATES.RUNNING]: { x: finalWidth * 0.5 * spacingMultiplier, y: 200 },
+        [STATES.WAITING]: { x: finalWidth * 0.325 * spacingMultiplier, y: 350 },
+        [STATES.TERMINATED]: { x: finalWidth * 0.6 * spacingMultiplier, y: 100 },
     };
 };
 

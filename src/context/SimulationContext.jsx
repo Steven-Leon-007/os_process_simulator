@@ -143,6 +143,16 @@ export function SimulationProvider({ children }) {
         return MMU.getClockState();
     };
 
+    // Obtener pasos del último recorrido del algoritmo Clock
+    const getClockSteps = () => {
+        return MMU.getClockSteps();
+    };
+
+    // Limpiar pasos del algoritmo Clock
+    const clearClockSteps = () => {
+        return MMU.clearClockSteps();
+    };
+
     // Verificar si la memoria está llena
     const isMemoryFull = () => {
         return MMU.isMemoryFull();
@@ -169,6 +179,8 @@ export function SimulationProvider({ children }) {
             getReplacementHistory,
             getReplacementStats,
             getClockState,
+            getClockSteps,
+            clearClockSteps,
             isMemoryFull,
         }}>
             {children}
