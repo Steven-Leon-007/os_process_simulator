@@ -79,6 +79,6 @@ describe("Motor de simulación (engine.js)", () => {
     const st = engine.getEngineState();
     expect(st.mode).toBe("manual");
     expect(st.running).toBe(false);
-    expect(st.speed).toBe(1000);
+    expect(st.speed).toBe(6000);
   });
 });

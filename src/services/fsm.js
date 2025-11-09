@@ -1,5 +1,19 @@
 import { getTimestamp } from "../utils/time.js";
 import * as MMU from "./mmu.js";
+import * as Disk from "./disk.js";
+
+// Configuración de callbacks para notificar cambios
+let transitionConfig = {
+  onMemoryUpdate: null, // Callback para notificar actualizaciones de memoria
+};
+
+/**
+ * Configura el callback de actualización de memoria
+ * @param {Function} callback - Función a llamar cuando se actualice la memoria
+ */
+export function setMemoryUpdateCallback(callback) {
+  transitionConfig.onMemoryUpdate = callback;
+}
 
 /**
  * Estados posibles de un proceso.
@@ -123,7 +137,7 @@ function transition(process, toState, cause = "manual") {
     process.syscalls.push({ type: "CPU_ASSIGN", at: now });
     
     // Simular accesos a memoria cuando el proceso está en ejecución
-    // Hacerlo de forma no bloqueante (fire-and-forget)
+    // Hacerlo de forma no bloqueante (fire-and-forget) pero notificar cuando termine
     simulateMemoryAccess(process).then(memoryAccessResult => {
       if (memoryAccessResult) {
         // Si hubo un page fault, registrarlo
@@ -137,6 +151,12 @@ function transition(process, toState, cause = "manual") {
           });
         }
         process.memory.memoryAccesses += 1;
+        
+        // Notificar cambio de memoria después de operaciones async (especialmente escrituras dirty)
+        // Esto asegura que la UI se actualice después de escrituras al disco
+        if (transitionConfig.onMemoryUpdate) {
+          transitionConfig.onMemoryUpdate();
+        }
       }
     }).catch(err => {
       console.error('Error in memory access simulation:', err);
@@ -275,7 +295,7 @@ export function terminate(process, cause) {
 async function simulateMemoryAccess(process) {
   if (!process.memory) {
     return null;
-  }
+  }  
 
   const pageSize = MMU.getPageSize();
   const maxAddress = process.memory.numPages * pageSize;
@@ -283,11 +303,20 @@ async function simulateMemoryAccess(process) {
   // Generar dirección lógica aleatoria dentro del espacio de direcciones del proceso
   const logicalAddress = Math.floor(Math.random() * maxAddress);
 
+  // DECIDIR TIPO DE ACCESO ANTES DE LA TRADUCCIÓN (como en un OS real)
+  // 30% escritura, 70% lectura
+  const isWrite = Math.random() < 0.3;
+
   // Intentar traducir la dirección
   const translationResult = MMU.translateAddress(process.pid, logicalAddress);
 
   if (translationResult.success) {
-    // Acceso exitoso
+    // Página YA está en RAM - completar el acceso
+    if (isWrite) {
+      // Marcar la página como modificada (dirty bit = 1)
+      MMU.markPageAsModified(process.pid, translationResult.pageNumber);
+    }
+    
     return {
       success: true,
       logicalAddress,
@@ -295,6 +324,7 @@ async function simulateMemoryAccess(process) {
       pageNumber: translationResult.pageNumber,
       frameNumber: translationResult.frameNumber,
       pageFault: false,
+      isWrite, // Indica si fue una escritura o lectura
     };
   }
 
@@ -302,12 +332,23 @@ async function simulateMemoryAccess(process) {
     // Page Fault detectado - intentar manejarlo
     const faultResult = await MMU.handlePageFault(process.pid, translationResult.pageNumber);
 
+    if (faultResult.success && isWrite) {
+      // Si el acceso original era ESCRITURA, marcar como dirty después de cargar
+      // (Comportamiento realista: escritura que causó page fault marca página como dirty)
+      MMU.markPageAsModified(process.pid, translationResult.pageNumber);
+      
+      // IMPORTANTE: Actualizar el disco para reflejar que la página es dirty
+      // Si la página fue allocatePage() como clean, ahora debe ser dirty en disco también
+      await Disk.writePage(process.pid, translationResult.pageNumber, null, true);
+    }
+
     return {
       success: faultResult.success,
       pageFault: true,
       pageNumber: translationResult.pageNumber,
       logicalAddress,
       handled: faultResult.success,
+      isWrite, // Indica el tipo de acceso original
       faultResult,
     };
   }

@@ -3,13 +3,13 @@ import { useSim } from "../../context/SimulationContext";
 import "./ControlBar.css";
 import InfoPanel from "../info-panel/InfoPanel";
 import MemoryPanel from "../memory-panel/MemoryPanel";
+import DiskPanel from "../memory-panel/DiskPanel";
 import useAudio from "../../hooks/useAudio";
 import createProcessSfx from "../../assets/effects/create_process.mp3";
 import { useSound } from "../../context/SoundContext";
-import PageTableView from "../memory-panel/PageTableView";
 
-const SPEEDS = [6000, 3000, 1666, 1500]; // ms para x0.5, x1.0, x1.5, x2.0
-const SPEED_LABELS = ["x0.5", "x1.0", "x1.5", "x2.0"];
+const SPEEDS = [15000, 10000, 6000, 4000, 2500]; // ms para x0.25, x0.5, x0.75, x1.0, x1.5
+const SPEED_LABELS = ["x0.25", "x0.5", "x0.75", "x1.0", "x1.5"];
 
 const ControlBar = ({ showMemory = false, selectedPid, onSelectProcess, onClockAnimationComplete }) => {
   const { create, speed, setSpeed, mode, setMode, state, pause } = useSim();
@@ -130,10 +130,7 @@ const ControlBar = ({ showMemory = false, selectedPid, onSelectProcess, onClockA
       {showMemory ? (
         <div className="show-memory-container">
           <MemoryPanel onClockAnimationComplete={onClockAnimationComplete} />
-          <PageTableView 
-            selectedPid={selectedPid}
-            onProcessSelect={onSelectProcess}
-          />
+          <DiskPanel />
         </div>
       ) : (
         <InfoPanel 
