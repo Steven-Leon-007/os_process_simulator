@@ -11,7 +11,7 @@ let swapSpace = new Map(); // Key: `${pid}-${pageNumber}`, Value: pageData
 
 // Configuración del disco
 let diskConfig = {
-  ioDelayMs: 1500, // Tiempo de I/O simulado en miliseconds (mínimo 1.5s)
+  ioDelayMs: 3000, // Tiempo de I/O simulado en miliseconds (3s para mejor visualización)
   enabled: true, // Permite activar/desactivar delays para testing
 };
 
@@ -20,10 +20,10 @@ let diskOperations = [];
 
 /**
  * Inicializa el módulo de disco con la configuración especificada
- * @param {number} ioDelayMs - Tiempo de delay para operaciones de I/O en ms (default: 1500)
+ * @param {number} ioDelayMs - Tiempo de delay para operaciones de I/O en ms (default: 3000)
  * @param {boolean} enabled - Habilitar delays (default: true)
  */
-export function initializeDisk(ioDelayMs = 1500, enabled = true) {
+export function initializeDisk(ioDelayMs = 3000, enabled = true) {
   diskConfig.ioDelayMs = ioDelayMs;
   diskConfig.enabled = enabled;
   swapSpace.clear();

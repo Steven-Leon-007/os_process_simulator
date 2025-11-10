@@ -42,7 +42,15 @@ export function SimulationProvider({ children }) {
         
         // Configurar el callback en FSM para operaciones async (escrituras dirty al disco)
         FSM.setMemoryUpdateCallback(onMemoryChange);
-    }, [sim.setMemoryCallback]);
+        
+        // Configurar el callback para actualizaciones de procesos (bloqueo/desbloqueo por I/O)
+        FSM.setProcessUpdateCallback((updatedProcess) => {
+            // Actualizar el proceso en el estado
+            sim.dispatch({ type: 'UPDATE_PROCESS', pid: updatedProcess.pid, process: updatedProcess });
+            // También actualizar memoria
+            onMemoryChange();
+        });
+    }, [sim.setMemoryCallback, sim.dispatch]);
 
     // Crear procesos automáticamente cada 7 segundos en modo automático
     useEffect(() => {

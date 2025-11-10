@@ -89,6 +89,7 @@ export async function handlePageFault(pid, pageNumber, pageTable) {
         },
         replacement: false,
         diskOperation: loadResult.diskOperation,
+        hadDiskIO: loadResult.hadDiskIO,
       };
       
       replacementHistory.push(loadEvent);
@@ -102,6 +103,7 @@ export async function handlePageFault(pid, pageNumber, pageTable) {
         origin: loadResult.origin,
         timestamp: loadResult.timestamp,
         diskOperation: loadResult.diskOperation,
+        hadDiskIO: loadResult.hadDiskIO, // Propagar la bandera de I/O de disco
       };
     } else {
       return loadResult;
@@ -151,10 +153,12 @@ export async function loadPageIntoFrame(pid, pageNumber, frameNumber, pageTable)
   const pageInSwap = Disk.pageExistsInSwap(pid, pageNumber);
   let origin = 'RAM'; // Por defecto, asumimos que es una página nueva
   let diskOperation = null;
+  let hadDiskIO = false; // Nueva bandera para rastrear si hubo I/O de disco real
 
   if (pageInSwap) {
     // La página existe en swap, hay que leerla desde el disco
     origin = 'DISK';
+    hadDiskIO = true; // Operación de DISK_READ
     const readResult = await Disk.readPage(pid, pageNumber);
     
     if (!readResult.success) {
@@ -164,6 +168,7 @@ export async function loadPageIntoFrame(pid, pageNumber, frameNumber, pageTable)
         pid,
         pageNumber,
         diskError: readResult.error,
+        hadDiskIO,
       };
     }
     
@@ -213,6 +218,7 @@ export async function loadPageIntoFrame(pid, pageNumber, frameNumber, pageTable)
     origin, // 'RAM' o 'DISK'
     diskOperation, // Operación de disco ejecutada (DISK_READ o DISK_ALLOCATE)
     simulatedDiskLoad: true, // Indica que se simuló carga desde disco
+    hadDiskIO, // Nueva bandera que indica si hubo I/O de disco real (DISK_READ)
   };
 }
 
@@ -305,7 +311,9 @@ export async function clockReplacement(newPid, newPageNumber, newPageTable) {
 
   // Si la página víctima está modificada (dirty bit = 1), escribir al disco
   let diskWriteOperation = null;
+  let hadDiskWrite = false; // Bandera para DISK_WRITE
   if (wasDirty) {
+    hadDiskWrite = true;
     const writeResult = await Disk.writePage(
       victimPid, 
       victimPageNumber, 
@@ -363,6 +371,7 @@ export async function clockReplacement(newPid, newPageNumber, newPageTable) {
       write: diskWriteOperation, // DISK_WRITE si wasDirty
       read: loadResult.diskOperation, // DISK_READ o DISK_ALLOCATE
     },
+    hadDiskIO: hadDiskWrite || loadResult.hadDiskIO, // Hubo I/O si hubo WRITE o READ
   };
 
   replacementHistory.push(replacementEvent);
@@ -386,6 +395,7 @@ export async function clockReplacement(newPid, newPageNumber, newPageTable) {
       write: diskWriteOperation,
       read: loadResult.diskOperation,
     },
+    hadDiskIO: hadDiskWrite || loadResult.hadDiskIO, // Propagar bandera de I/O
     requiresVictimTableUpdate: true, // Indica que la tabla de la víctima debe actualizarse
   };
 }

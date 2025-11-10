@@ -5,6 +5,7 @@ import * as Disk from "./disk.js";
 // Configuración de callbacks para notificar cambios
 let transitionConfig = {
   onMemoryUpdate: null, // Callback para notificar actualizaciones de memoria
+  onProcessUpdate: null, // Callback para notificar actualizaciones de procesos (para bloqueo I/O)
 };
 
 /**
@@ -13,6 +14,14 @@ let transitionConfig = {
  */
 export function setMemoryUpdateCallback(callback) {
   transitionConfig.onMemoryUpdate = callback;
+}
+
+/**
+ * Configura el callback de actualización de procesos
+ * @param {Function} callback - Función a llamar cuando un proceso cambie de estado
+ */
+export function setProcessUpdateCallback(callback) {
+  transitionConfig.onProcessUpdate = callback;
 }
 
 /**
@@ -136,31 +145,50 @@ function transition(process, toState, cause = "manual") {
     process.cpuRegisters["AX"] = (process.cpuRegisters["AX"] || 0) + 10;
     process.syscalls.push({ type: "CPU_ASSIGN", at: now });
     
-    // Simular accesos a memoria cuando el proceso está en ejecución
-    // Hacerlo de forma no bloqueante (fire-and-forget) pero notificar cuando termine
-    simulateMemoryAccess(process).then(memoryAccessResult => {
-      if (memoryAccessResult) {
-        // Si hubo un page fault, registrarlo
-        if (memoryAccessResult.pageFault) {
-          process.memory.pageFaults += 1;
-          process.syscalls.push({
-            type: "PAGE_FAULT",
-            at: getTimestamp(),
-            pageNumber: memoryAccessResult.pageNumber,
-            handled: memoryAccessResult.handled,
-          });
-        }
-        process.memory.memoryAccesses += 1;
-        
-        // Notificar cambio de memoria después de operaciones async (especialmente escrituras dirty)
-        // Esto asegura que la UI se actualice después de escrituras al disco
-        if (transitionConfig.onMemoryUpdate) {
-          transitionConfig.onMemoryUpdate();
+    // Simular MÚLTIPLES accesos a memoria cuando el proceso está en ejecución
+    // Un proceso en ejecución típicamente hace varios accesos a memoria
+    const numAccesses = Math.floor(Math.random() * 3) + 2; // Entre 2 y 4 accesos
+    
+    // Ejecutar accesos secuencialmente con un delay inicial
+    // para que la UI tenga tiempo de mostrar el estado RUNNING
+    (async () => {
+      // Esperar 500ms para que la UI muestre el estado RUNNING
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      for (let i = 0; i < numAccesses; i++) {
+        try {
+          const memoryAccessResult = await simulateMemoryAccess(process);
+          
+          if (memoryAccessResult) {
+            // Si hubo un page fault, registrarlo
+            if (memoryAccessResult.pageFault) {
+              process.memory.pageFaults += 1;
+              process.syscalls.push({
+                type: "PAGE_FAULT",
+                at: getTimestamp(),
+                pageNumber: memoryAccessResult.pageNumber,
+                handled: memoryAccessResult.handled,
+                hadDiskIO: memoryAccessResult.hadDiskIO || false,
+              });
+            }
+            process.memory.memoryAccesses += 1;
+            
+            // Notificar cambio de memoria después de operaciones async
+            if (transitionConfig.onMemoryUpdate) {
+              transitionConfig.onMemoryUpdate();
+            }
+          }
+          
+          // Si el proceso ya no está en RUNNING/WAITING, detener accesos
+          if (process.state !== STATES.RUNNING && process.state !== STATES.WAITING) {
+            break;
+          }
+        } catch (err) {
+          console.error('Error in memory access simulation:', err);
+          break;
         }
       }
-    }).catch(err => {
-      console.error('Error in memory access simulation:', err);
-    });
+    })();
   }
   if (toState === STATES.WAITING) {
     process.cpuRegisters["IO_WAIT"] = now;
@@ -273,6 +301,71 @@ export function ioComplete(process, cause) {
 }
 
 /**
+ * Bloquea un proceso por operación de I/O de disco (page fault).
+ * 
+ * Esta función se llama automáticamente cuando ocurre un DISK_READ o DISK_WRITE
+ * durante el manejo de un page fault.
+ *
+ * @param {object} process Proceso que solicita I/O de disco
+ * @param {string} operation Tipo de operación ('DISK_READ' o 'DISK_WRITE')
+ * @param {number} pageNumber Número de página involucrada
+ * @returns El proceso bloqueado esperando I/O de disco
+ */
+export function blockForDiskIO(process, operation, pageNumber) {
+  const cause = `disk-io:${operation}:page-${pageNumber}`;
+  const now = getTimestamp();
+  
+  // Marcar que el proceso está bloqueado por I/O de disco
+  process.cpuRegisters["DISK_IO_BLOCKED"] = now;
+  process.cpuRegisters["DISK_IO_OPERATION"] = operation;
+  process.cpuRegisters["DISK_IO_PAGE"] = pageNumber;
+  
+  // Registrar syscall específico de bloqueo por disco
+  process.syscalls.push({
+    type: "DISK_IO_BLOCK",
+    at: now,
+    operation,
+    pageNumber,
+  });
+  
+  return transition(process, STATES.WAITING, cause);
+}
+
+/**
+ * Desbloquea un proceso después de completar I/O de disco.
+ * 
+ * Esta función se llama automáticamente cuando termina la operación de disco.
+ *
+ * @param {object} process Proceso que completa I/O de disco
+ * @param {string} operation Tipo de operación completada
+ * @param {number} pageNumber Número de página involucrada
+ * @returns El proceso desbloqueado en estado READY
+ */
+export function unblockFromDiskIO(process, operation, pageNumber) {
+  const cause = `disk-io-complete:${operation}:page-${pageNumber}`;
+  const now = getTimestamp();
+  
+  // Limpiar registros de bloqueo de disco
+  const blockedAt = process.cpuRegisters["DISK_IO_BLOCKED"];
+  const duration = blockedAt ? now - blockedAt : 0;
+  
+  delete process.cpuRegisters["DISK_IO_BLOCKED"];
+  delete process.cpuRegisters["DISK_IO_OPERATION"];
+  delete process.cpuRegisters["DISK_IO_PAGE"];
+  
+  // Registrar syscall específico de desbloqueo por disco
+  process.syscalls.push({
+    type: "DISK_IO_UNBLOCK",
+    at: now,
+    operation,
+    pageNumber,
+    duration,
+  });
+  
+  return transition(process, STATES.READY, cause);
+}
+
+/**
  * Finaliza un proceso.
  *
  * El proceso pasa a estar en estado Terminated.
@@ -298,10 +391,40 @@ async function simulateMemoryAccess(process) {
   }  
 
   const pageSize = MMU.getPageSize();
-  const maxAddress = process.memory.numPages * pageSize;
-
-  // Generar dirección lógica aleatoria dentro del espacio de direcciones del proceso
-  const logicalAddress = Math.floor(Math.random() * maxAddress);
+  const numPages = process.memory.numPages;
+  
+  // Obtener tabla de páginas para ver cuáles están cargadas
+  const pageTable = MMU.getProcessPageTable(process.pid);
+  
+  // Decidir si intentar acceder a una página no cargada (para forzar page faults)
+  // 50% de probabilidad de acceder a página no cargada si hay páginas sin cargar
+  const shouldForcePageFault = Math.random() < 0.8;
+  
+  let logicalAddress;
+  
+  if (shouldForcePageFault && pageTable) {
+    // Buscar páginas no cargadas
+    const unloadedPages = [];
+    for (let i = 0; i < pageTable.length; i++) {
+      if (pageTable[i].present === 0) {
+        unloadedPages.push(i);
+      }
+    }
+    
+    if (unloadedPages.length > 0) {
+      // Seleccionar una página no cargada aleatoriamente
+      const targetPage = unloadedPages[Math.floor(Math.random() * unloadedPages.length)];
+      // Generar dirección dentro de esa página
+      const offsetInPage = Math.floor(Math.random() * pageSize);
+      logicalAddress = targetPage * pageSize + offsetInPage;
+    } else {
+      // Todas las páginas están cargadas, generar dirección aleatoria
+      logicalAddress = Math.floor(Math.random() * numPages * pageSize);
+    }
+  } else {
+    // Generar dirección lógica aleatoria normal
+    logicalAddress = Math.floor(Math.random() * numPages * pageSize);
+  }
 
   // DECIDIR TIPO DE ACCESO ANTES DE LA TRADUCCIÓN (como en un OS real)
   // 30% escritura, 70% lectura
@@ -329,27 +452,73 @@ async function simulateMemoryAccess(process) {
   }
 
   if (translationResult.pageFault) {
-    // Page Fault detectado - intentar manejarlo
-    const faultResult = await MMU.handlePageFault(process.pid, translationResult.pageNumber);
+    // Page Fault detectado - el proceso debe bloquearse por I/O de disco
+    const pageNumber = translationResult.pageNumber;
+    const now = getTimestamp();
+    
+    // Registrar inicio de operación de I/O de disco
+    process.syscalls.push({
+      type: "DISK_IO_START",
+      at: now,
+      pageNumber,
+      reason: "PAGE_FAULT",
+    });
+    
+    // BLOQUEAR EL PROCESO: RUNNING → WAITING (transición real)
+    // Esto es seguro porque solo se llama desde RUNNING
+    const blockedProcess = requestIO(process, `disk-io-page-${pageNumber}`);
+    
+    // Notificar al contexto que el proceso cambió de estado
+    if (transitionConfig.onProcessUpdate) {
+      transitionConfig.onProcessUpdate(blockedProcess);
+    }
+    
+    // Dar tiempo a la UI para mostrar el estado WAITING
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Intentar manejar el page fault (esto incluye I/O de disco y toma tiempo)
+    const faultResult = await MMU.handlePageFault(process.pid, pageNumber);
 
+    // Registrar fin de operación de I/O de disco
+    const endTime = getTimestamp();
+    blockedProcess.syscalls.push({
+      type: "DISK_IO_END",
+      at: endTime,
+      pageNumber,
+      duration: endTime - now,
+      hadDiskIO: faultResult.hadDiskIO || false,
+      success: faultResult.success,
+    });
+
+    // Después del page fault, marcar como dirty si fue escritura
     if (faultResult.success && isWrite) {
       // Si el acceso original era ESCRITURA, marcar como dirty después de cargar
-      // (Comportamiento realista: escritura que causó page fault marca página como dirty)
-      MMU.markPageAsModified(process.pid, translationResult.pageNumber);
+      MMU.markPageAsModified(process.pid, pageNumber);
       
-      // IMPORTANTE: Actualizar el disco para reflejar que la página es dirty
-      // Si la página fue allocatePage() como clean, ahora debe ser dirty en disco también
-      await Disk.writePage(process.pid, translationResult.pageNumber, null, true);
+      // Actualizar el disco para reflejar que la página es dirty
+      await Disk.writePage(process.pid, pageNumber, null, true);
     }
+
+    // DESBLOQUEAR EL PROCESO: WAITING → READY (transición real)
+    const unblockedProcess = ioComplete(blockedProcess, `disk-io-complete-page-${pageNumber}`);
+    
+    // Notificar al contexto que el proceso cambió de estado nuevamente
+    if (transitionConfig.onProcessUpdate) {
+      transitionConfig.onProcessUpdate(unblockedProcess);
+    }
+    
+    // Dar tiempo a la UI para mostrar el estado READY antes de continuar
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     return {
       success: faultResult.success,
       pageFault: true,
-      pageNumber: translationResult.pageNumber,
+      pageNumber,
       logicalAddress,
       handled: faultResult.success,
       isWrite, // Indica el tipo de acceso original
       faultResult,
+      hadDiskIO: faultResult.hadDiskIO, // Indica si hubo I/O de disco real
     };
   }
 
