@@ -60,7 +60,7 @@ export function SimulationProvider({ children }) {
         if (mode !== 'auto') return;
         const interval = setInterval(() => {
             sim.create(); // Puedes pasar prioridad si lo deseas
-        }, 7000);
+        }, 10000);
         return () => clearInterval(interval);
     }, [mode, sim.create]);
 

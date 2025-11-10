@@ -40,7 +40,7 @@ const ControlBar = ({ showMemory = false, selectedPid, onSelectProcess, onClockA
 
   function downloadCSV(processes) {
     const header =
-      "PID;Priority;PC;CpuRegisters;Syscalls;De;Para;Timestamp;Causa\n";
+      "PID;Priority;PC;CpuRegisters;Syscalls;De;Para;Timestamp;Causa;PageFaultsTotales;AccesosMemoriaTotales;PaginasVirtuales\n";
     const rows = processes
       .flatMap((p) =>
         p.history.length > 0
@@ -49,13 +49,13 @@ const ControlBar = ({ showMemory = false, selectedPid, onSelectProcess, onClockA
               `${p.pid};${h.priority};${h.pc};"${JSON.stringify(
                 h.cpuRegisters
               )}";"${JSON.stringify(h.syscalls)}";${h.from};${h.to};${h.timestamp
-              };${h.cause}`
+              };${h.cause};${p.memory?.pageFaults || 0};${p.memory?.memoryAccesses || 0};${p.memory?.numPages || 0}`
           )
           : [
             `${p.pid};${p.priority};${p.pc};"${JSON.stringify(
               p.cpuRegisters
             )}";"${JSON.stringify(p.syscalls)}";${p.state};${p.state};${p.createdAt
-            };Creado`,
+            };Creado;${p.memory?.pageFaults || 0};${p.memory?.memoryAccesses || 0};${p.memory?.numPages || 0}`,
           ]
       )
       .join("\n");
