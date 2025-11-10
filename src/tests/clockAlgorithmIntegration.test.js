@@ -8,6 +8,7 @@ import * as fsm from "../services/fsm.js";
 import * as Memory from "../services/memory.js";
 import * as MMU from "../services/mmu.js";
 import * as PageFaultHandler from "../services/pageFaultHandler.js";
+import * as Disk from "../services/disk.js";
 import { resetPID } from "../services/pidGenerator.js";
 
 describe("Full Memory Integration - Clock Algorithm", () => {
@@ -16,6 +17,7 @@ describe("Full Memory Integration - Clock Algorithm", () => {
     Memory.resetMemory();
     MMU.resetMMU();
     PageFaultHandler.resetPageFaultHandler();
+    Disk.initializeDisk(0, false); // Deshabilitar delay de I/O para tests
 
     // Memoria pequeña para forzar reemplazos rápido
     Memory.initializeMemory(8, 4096); // 8 marcos, 4KB/página
@@ -23,7 +25,7 @@ describe("Full Memory Integration - Clock Algorithm", () => {
   });
 
   describe("Memory Full Scenario - Clock Replacement", () => {
-    it("should handle page faults with Clock replacement when memory fills up", () => {
+    it("should handle page faults with Clock replacement when memory fills up", async () => {
       // Crear varios procesos para llenar la memoria
       const proc1 = fsm.createProcess("001", 5, 4, 2);
       const proc2 = fsm.createProcess("002", 3, 4, 2);
@@ -36,7 +38,7 @@ describe("Full Memory Integration - Clock Algorithm", () => {
 
       // Acceder a página no cargada - debería causar reemplazo
       const proc5 = fsm.createProcess("005", 4, 4, 0); // Sin páginas iniciales
-      const accessResult = fsm.accessMemory(proc5, 100);
+      const accessResult = await fsm.accessMemory(proc5, 100);
 
       if (MMU.isMemoryFull()) {
         // Si memoria llena, debería haber habido reemplazo
@@ -48,7 +50,7 @@ describe("Full Memory Integration - Clock Algorithm", () => {
       }
     });
 
-    it("should track all replacements in global history", () => {
+    it("should track all replacements in global history", async () => {
       // Llenar memoria completamente
       const processes = [];
       for (let i = 0; i < 4; i++) {
@@ -60,8 +62,8 @@ describe("Full Memory Integration - Clock Algorithm", () => {
 
       // Causar múltiples page faults que requieran reemplazo
       const proc5 = fsm.createProcess("005", 5, 4, 0);
-      fsm.accessMemory(proc5, 100);
-      fsm.accessMemory(proc5, 5000);
+      await fsm.accessMemory(proc5, 100);
+      await fsm.accessMemory(proc5, 5000);
 
       const history = MMU.getReplacementHistory();
       expect(history.length).toBeGreaterThan(0);
@@ -76,7 +78,7 @@ describe("Full Memory Integration - Clock Algorithm", () => {
       });
     });
 
-    it("should give second chance by clearing use bits", () => {
+    it("should give second chance by clearing use bits", async () => {
       // Llenar memoria
       const processes = [];
       for (let i = 0; i < 4; i++) {
@@ -94,7 +96,7 @@ describe("Full Memory Integration - Clock Algorithm", () => {
 
       // Causar page fault - Clock debe dar segunda oportunidad
       const proc5 = fsm.createProcess("005", 5, 4, 0);
-      fsm.accessMemory(proc5, 100);
+      await fsm.accessMemory(proc5, 100);
 
       const lastReplacement = PageFaultHandler.getLastReplacement();
       if (lastReplacement) {

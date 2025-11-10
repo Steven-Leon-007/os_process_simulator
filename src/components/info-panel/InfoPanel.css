@@ -25,6 +25,51 @@
     color: var(--color-text-primary);
     transition: all 0.2s;
     cursor: pointer;
+    position: relative;
+}
+
+.process-card.disk-io-blocked {
+    border: 2px solid #ff9800;
+    animation: disk-io-pulse 2s ease-in-out infinite;
+    background: linear-gradient(135deg, rgba(255, 152, 0, 0.1), rgba(255, 193, 7, 0.05));
+}
+
+@keyframes disk-io-pulse {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(255, 152, 0, 0.6);
+    }
+}
+
+.disk-io-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #ff9800, #f57c00);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7em;
+    font-weight: bold;
+    margin-left: 8px;
+    animation: badge-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.disk-io-info {
+    padding: 4px 8px;
+    background: rgba(255, 152, 0, 0.1);
+    border-radius: 4px;
+    border-left: 3px solid #ff9800;
+    font-weight: 500;
 }
 
 .process-card:hover {

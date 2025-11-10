@@ -3,13 +3,15 @@ import useSimulation from '../hooks/useSimulation';
 import * as engine from '../services/engine.js';
 import * as Memory from '../services/memory.js';
 import * as MMU from '../services/mmu.js';
+import * as Disk from '../services/disk.js';
+import * as FSM from '../services/fsm.js';
 
 const SimulationContext = createContext(null)
 
 export function SimulationProvider({ children }) {
     const sim = useSimulation()
     const [mode, setMode] = useState('manual');
-    const [speed, setSpeed] = useState(3000);
+    const [speed, setSpeed] = useState(6000);
     const [memoryState, setMemoryState] = useState(null);
     const [memoryVersion, setMemoryVersion] = useState(0);
 
@@ -21,6 +23,9 @@ export function SimulationProvider({ children }) {
         Memory.initializeMemory(TOTAL_FRAMES, PAGE_SIZE);
         MMU.initializeMMU(PAGE_SIZE);
         
+        // Configurar velocidad inicial en FSM
+        FSM.setSimulationSpeed(speed);
+        
         // Inicializar estado de memoria
         const initialState = Memory.getMemorySnapshot();
         setMemoryState(initialState);
@@ -28,7 +33,7 @@ export function SimulationProvider({ children }) {
         console.log('Memory initialized:', initialState);
     }, []);
 
-    // Callback para actualizar memoria (se ejecuta desde el reducer)
+    // Callback para actualizar memoria (se ejecuta desde el reducer y desde FSM después de operaciones async)
     useEffect(() => {
         const onMemoryChange = () => {
             const snapshot = Memory.getMemorySnapshot();
@@ -37,7 +42,18 @@ export function SimulationProvider({ children }) {
         
         // Configurar el callback en el hook de simulación
         sim.setMemoryCallback(onMemoryChange);
-    }, [sim.setMemoryCallback]);
+        
+        // Configurar el callback en FSM para operaciones async (escrituras dirty al disco)
+        FSM.setMemoryUpdateCallback(onMemoryChange);
+        
+        // Configurar el callback para actualizaciones de procesos (bloqueo/desbloqueo por I/O)
+        FSM.setProcessUpdateCallback((updatedProcess) => {
+            // Actualizar el proceso en el estado
+            sim.dispatch({ type: 'UPDATE_PROCESS', pid: updatedProcess.pid, process: updatedProcess });
+            // También actualizar memoria
+            onMemoryChange();
+        });
+    }, [sim.setMemoryCallback, sim.dispatch]);
 
     // Crear procesos automáticamente cada 7 segundos en modo automático
     useEffect(() => {
@@ -87,6 +103,8 @@ export function SimulationProvider({ children }) {
     const handleSetSpeed = (newSpeed) => {
         setSpeed(newSpeed);
         engine.setSpeed(newSpeed);
+        // También configurar la velocidad en FSM para ajustar delays dinámicamente
+        FSM.setSimulationSpeed(newSpeed);
     };
 
     // Actualizar estado de memoria desde los servicios
@@ -158,6 +176,16 @@ export function SimulationProvider({ children }) {
         return MMU.isMemoryFull();
     };
 
+    // Obtener snapshot del disco (swap space)
+    const getDiskSnapshot = () => {
+        return Disk.getSwapSnapshot();
+    };
+
+    // Obtener estadísticas del disco
+    const getDiskStats = () => {
+        return Disk.getDiskStats();
+    };
+
     return (
         <SimulationContext.Provider value={{
             ...sim,
@@ -182,6 +210,9 @@ export function SimulationProvider({ children }) {
             getClockSteps,
             clearClockSteps,
             isMemoryFull,
+            // Funciones de disco
+            getDiskSnapshot,
+            getDiskStats,
         }}>
             {children}
         </SimulationContext.Provider>

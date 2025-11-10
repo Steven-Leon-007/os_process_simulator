@@ -1,0 +1,299 @@
+.disk-panel {
+  background-color: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.disk-panel:hover {
+  border-color: rgba(0, 229, 255, 0.6);
+  box-shadow: 0 0 25px rgba(0, 229, 255, 0.2);
+}
+
+.disk-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+}
+
+.disk-panel-header h3 {
+  color: var(--neon-blue);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+}
+
+.disk-stats {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.disk-stats .stat {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.disk-stats .stat-label {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+}
+
+.disk-stats .stat-value {
+  color: var(--neon-blue);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.disk-content {
+  min-height: 200px;
+}
+
+.disk-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.disk-empty p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.disk-empty small {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.85rem;
+  max-width: 400px;
+}
+
+.disk-pages-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.disk-process-group {
+  background-color: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.disk-process-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.disk-process-pid {
+  color: var(--neon-blue);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.disk-process-count {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+}
+
+.disk-pages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.75rem;
+}
+
+.disk-page {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.3));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 0.75rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.disk-page:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.disk-page.clean {
+  border-color: rgba(0, 229, 255, 0.3);
+}
+
+.disk-page.clean:hover {
+  border-color: rgba(0, 229, 255, 0.6);
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+}
+
+.disk-page.dirty {
+  border-color: rgba(255, 165, 0, 0.5);
+  background: linear-gradient(135deg, rgba(255, 165, 0, 0.15), rgba(0, 0, 0, 0.3));
+}
+
+.disk-page.dirty:hover {
+  border-color: rgba(255, 165, 0, 0.8);
+  box-shadow: 0 0 15px rgba(255, 165, 0, 0.3);
+}
+
+.disk-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.disk-page-number {
+  color: var(--neon-blue);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.disk-page-badge {
+  background: rgba(255, 165, 0, 0.8);
+  color: #000;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  box-shadow: 0 0 8px rgba(255, 165, 0, 0.5);
+}
+
+.disk-page-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.disk-page-info small {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+}
+
+.disk-legend {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+}
+
+.legend-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.legend-color.disk-clean {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.3));
+  border-color: rgba(0, 229, 255, 0.5);
+}
+
+.legend-color.disk-dirty {
+  background: linear-gradient(135deg, rgba(255, 165, 0, 0.15), rgba(0, 0, 0, 0.3));
+  border-color: rgba(255, 165, 0, 0.5);
+}
+
+.legend-badge {
+  background: rgba(255, 165, 0, 0.8);
+  color: #000;
+  font-weight: 700;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  box-shadow: 0 0 8px rgba(255, 165, 0, 0.5);
+}
+
+.disk-operations-summary {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.disk-op-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.disk-op-label {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8rem;
+}
+
+.disk-op-value {
+  color: var(--neon-blue);
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+/* Animaciones para operaciones de I/O */
+@keyframes diskIO {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(0, 229, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.8);
+  }
+}
+
+.disk-page.io-active {
+  animation: diskIO 1.5s ease-in-out;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .disk-panel-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .disk-stats {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .disk-pages-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  }
+
+  .disk-legend {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .disk-operations-summary {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}

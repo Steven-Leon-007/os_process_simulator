@@ -15,11 +15,12 @@ import {
 
 // Estado interno del motor
 let mode = "manual"; // 'manual', 'auto'
-let speed = 3000; // ms entre transiciones (0 = pausa)
+let speed = 6000; // ms base entre transiciones
 let timer = null;
 let onUpdate = null; // callback para notificar cambios
 let processes = [];
 let onModeChange = null;
+let processTimers = new Map(); // Map de pid -> {timer, nextTransitionTime}
 
 // Temporizador global para detectar inactividad en modo manual
 let manualInactivityTimer = null;
@@ -57,6 +58,9 @@ export function setManualInactivityTimeout(ms) {
 export function setMode(newMode) {
   mode = newMode;
   if (timer) stop();
+  // Limpiar todos los timers de procesos individuales
+  stopAllProcessTimers();
+  
   if (mode === "auto" && speed > 0) start();
   // Limpiar temporizador de inactividad si no es manual
   if (mode !== "manual") {
@@ -76,8 +80,9 @@ export function setMode(newMode) {
  */
 export function setSpeed(newSpeed) {
   speed = newSpeed;
-  if (timer) {
+  if (timer || processTimers.size > 0) {
     stop();
+    stopAllProcessTimers();
     if (speed > 0 && mode === "auto") start();
   }
 }
@@ -89,10 +94,12 @@ export function setSpeed(newSpeed) {
 export function start(procList = processes) {
   processes = procList;
   if (timer) stop();
+  stopAllProcessTimers();
+  
   if (speed === 0 || mode === "manual") return;
-  timer = setInterval(() => {
-    step();
-  }, speed);
+  
+  // Inicia timers independientes para cada proceso
+  scheduleAllProcesses();
 }
 
 /**
@@ -100,6 +107,7 @@ export function start(procList = processes) {
  */
 export function pause() {
   stop();
+  stopAllProcessTimers();
 }
 
 /**
@@ -113,8 +121,146 @@ export function stop() {
 }
 
 /**
+ * Detiene todos los timers de procesos individuales
+ */
+function stopAllProcessTimers() {
+  processTimers.forEach((timerData) => {
+    if (timerData.timer) {
+      clearTimeout(timerData.timer);
+    }
+  });
+  processTimers.clear();
+}
+
+/**
+ * Programa todos los procesos para que transicionen de forma independiente
+ */
+function scheduleAllProcesses() {
+  if (!processes || processes.length === 0) return;
+  
+  processes.forEach((proc) => {
+    // Solo programar procesos que no están en estado terminal o que pueden transicionar
+    if (proc.state !== STATES.TERMINATED && canAutoTransition(proc.state)) {
+      scheduleProcess(proc);
+    }
+  });
+}
+
+/**
+ * Verifica si un proceso en un estado dado puede hacer auto-transición
+ */
+function canAutoTransition(state) {
+  return [STATES.NEW, STATES.READY, STATES.RUNNING, STATES.WAITING].includes(state);
+}
+
+/**
+ * Programa un proceso individual para su próxima transición
+ * @param {Object} proc - proceso a programar
+ */
+function scheduleProcess(proc) {
+  // Si el proceso ya tiene un timer, cancelarlo
+  if (processTimers.has(proc.pid)) {
+    const existing = processTimers.get(proc.pid);
+    if (existing.timer) {
+      clearTimeout(existing.timer);
+    }
+  }
+  
+  // Calcular un tiempo aleatorio basado en la velocidad base
+  // Variación entre 0.7x y 1.5x del tiempo base para dar más naturalidad
+  const variation = 0.7 + Math.random() * 0.8; // rango [0.7, 1.5]
+  const delay = Math.floor(speed * variation);
+  
+  // Programar la transición
+  const timerId = setTimeout(() => {
+    executeProcessTransition(proc.pid);
+  }, delay);
+  
+  processTimers.set(proc.pid, {
+    timer: timerId,
+    nextTransitionTime: Date.now() + delay
+  });
+}
+
+/**
+ * Ejecuta la transición de un proceso específico
+ * @param {number} pid - ID del proceso
+ */
+function executeProcessTransition(pid) {
+  // Buscar el proceso actual
+  const proc = processes.find((p) => p.pid === pid);
+  
+  if (!proc || proc.state === STATES.TERMINATED) {
+    // Limpiar timer si el proceso ya no existe o está terminado
+    processTimers.delete(pid);
+    return;
+  }
+  
+  let updated = false;
+  let newProc = null;
+  
+  // Transiciones automáticas según el estado
+  try {
+    switch (proc.state) {
+      case STATES.NEW:
+        newProc = admit(proc, "auto");
+        updated = true;
+        break;
+      
+      case STATES.READY:
+        newProc = assignCPU(proc, "auto");
+        updated = true;
+        break;
+      
+      case STATES.RUNNING:
+        const r = Math.random();
+        if (r < 0.33) {
+          newProc = terminate(proc, "auto");
+        } else if (r < 0.66) {
+          newProc = requestIO(proc, "auto");
+        } else {
+          newProc = preempt(proc, "auto"); // vuelve a READY
+        }
+        updated = true;
+        break;
+      
+      case STATES.WAITING:
+        newProc = ioComplete(proc, "auto");
+        updated = true;
+        break;
+    }
+    
+    if (updated && newProc) {
+      // Actualizar el proceso en la lista
+      const index = processes.findIndex((p) => p.pid === pid);
+      if (index !== -1) {
+        processes[index] = newProc;
+      }
+      
+      // Notificar cambios
+      if (typeof onUpdate === "function") {
+        const cloned = processes.map((p) => ({ ...p }));
+        onUpdate(cloned);
+      }
+      
+      // Reprogramar el proceso si no está terminado y puede seguir transicionando
+      if (newProc.state !== STATES.TERMINATED && canAutoTransition(newProc.state)) {
+        scheduleProcess(newProc);
+      } else {
+        // Limpiar timer si el proceso terminó
+        processTimers.delete(pid);
+      }
+    }
+  } catch (error) {
+    console.error(`Error en transición automática del proceso ${pid}:`, error);
+    processTimers.delete(pid);
+  }
+}
+
+/**
  * Realiza un paso de simulación según el modo.
  * Aplica transiciones automáticas válidas.
+ * DEPRECATED: Ahora se usa scheduleProcess en su lugar
  */
 export function step() {
   if (!processes || processes.length === 0) return;
@@ -181,6 +327,7 @@ export function reset() {
     clearTimeout(timer);
     timer = null;
   }
+  stopAllProcessTimers();
   if (manualInactivityTimer) {
     clearTimeout(manualInactivityTimer);
     manualInactivityTimer = null;
@@ -195,7 +342,31 @@ export function reset() {
  * @param {Array} procList
  */
 export function setProcesses(procList) {
+  const oldPids = new Set(processes.map(p => p.pid));
+  const newPids = new Set(procList.map(p => p.pid));
+  
   processes = procList;
+  
+  // Si estamos en modo auto, programar nuevos procesos
+  if (mode === "auto") {
+    procList.forEach((proc) => {
+      // Solo programar procesos nuevos que no existían antes
+      if (!oldPids.has(proc.pid) && canAutoTransition(proc.state)) {
+        scheduleProcess(proc);
+      }
+    });
+    
+    // Limpiar timers de procesos que ya no existen
+    processTimers.forEach((_, pid) => {
+      if (!newPids.has(pid)) {
+        const timerData = processTimers.get(pid);
+        if (timerData && timerData.timer) {
+          clearTimeout(timerData.timer);
+        }
+        processTimers.delete(pid);
+      }
+    });
+  }
 }
 
 /**
@@ -203,10 +374,11 @@ export function setProcesses(procList) {
  */
 export function resetEngine() {
   stop(); // detiene el setInterval
+  stopAllProcessTimers(); // detiene todos los timers de procesos
   processes = [];
   onUpdate = null;
   mode = "manual";
-  speed = 1000;
+  speed = 6000;
 
   // limpia el temporizador de inactividad manual si estaba activo
   if (manualInactivityTimer) {

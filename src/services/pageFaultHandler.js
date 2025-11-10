@@ -6,6 +6,7 @@
 
 import * as Memory from './memory.js';
 import * as PageTable from './pageTable.js';
+import * as Disk from './disk.js';
 import { getTimestamp } from '../utils/time.js';
 
 // Historial global de eventos de reemplazo
@@ -36,9 +37,9 @@ export function clearClockSteps() {
  * @param {string} pid - ID del proceso que causó el page fault
  * @param {number} pageNumber - Número de página que causó el fallo
  * @param {Array} pageTable - Tabla de páginas del proceso
- * @returns {object} Resultado del manejo del page fault
+ * @returns {Promise<object>} Resultado del manejo del page fault
  */
-export function handlePageFault(pid, pageNumber, pageTable) {
+export async function handlePageFault(pid, pageNumber, pageTable) {
   if (!pageTable) {
     return {
       success: false,
@@ -73,7 +74,7 @@ export function handlePageFault(pid, pageNumber, pageTable) {
 
   if (freeFrame !== null) {
     // Hay marco libre disponible - asignación directa
-    const loadResult = loadPageIntoFrame(pid, pageNumber, freeFrame, pageTable);
+    const loadResult = await loadPageIntoFrame(pid, pageNumber, freeFrame, pageTable);
     
     if (loadResult.success) {
       // Registrar evento de carga sin reemplazo
@@ -84,8 +85,11 @@ export function handlePageFault(pid, pageNumber, pageTable) {
           pid,
           pageNumber,
           frameNumber: freeFrame,
+          origin: loadResult.origin, // RAM o DISK
         },
         replacement: false,
+        diskOperation: loadResult.diskOperation,
+        hadDiskIO: loadResult.hadDiskIO,
       };
       
       replacementHistory.push(loadEvent);
@@ -96,7 +100,10 @@ export function handlePageFault(pid, pageNumber, pageTable) {
         pageNumber,
         pid,
         replacement: false,
+        origin: loadResult.origin,
         timestamp: loadResult.timestamp,
+        diskOperation: loadResult.diskOperation,
+        hadDiskIO: loadResult.hadDiskIO, // Propagar la bandera de I/O de disco
       };
     } else {
       return loadResult;
@@ -104,7 +111,7 @@ export function handlePageFault(pid, pageNumber, pageTable) {
   }
 
   // No hay marcos libres - ejecutar algoritmo Clock de reemplazo
-  const replacementResult = clockReplacement(pid, pageNumber, pageTable);
+  const replacementResult = await clockReplacement(pid, pageNumber, pageTable);
 
   return replacementResult;
 }
@@ -117,9 +124,9 @@ export function handlePageFault(pid, pageNumber, pageTable) {
  * @param {number} pageNumber - Número de página a cargar
  * @param {number} frameNumber - Número de marco donde cargar
  * @param {Array} pageTable - Tabla de páginas del proceso
- * @returns {object} Resultado de la carga
+ * @returns {Promise<object>} Resultado de la carga
  */
-export function loadPageIntoFrame(pid, pageNumber, frameNumber, pageTable) {
+export async function loadPageIntoFrame(pid, pageNumber, frameNumber, pageTable) {
   const timestamp = getTimestamp();
 
   // Verificar que el marco existe
@@ -140,6 +147,42 @@ export function loadPageIntoFrame(pid, pageNumber, frameNumber, pageTable) {
       frameNumber,
       currentOwner: frame.pid,
     };
+  }
+
+  // Verificar si la página existe en el disco (swap)
+  const pageInSwap = Disk.pageExistsInSwap(pid, pageNumber);
+  let origin = 'RAM'; // Por defecto, asumimos que es una página nueva
+  let diskOperation = null;
+  let hadDiskIO = false; // Nueva bandera para rastrear si hubo I/O de disco real
+
+  if (pageInSwap) {
+    // La página existe en swap, hay que leerla desde el disco
+    origin = 'DISK';
+    hadDiskIO = true; // Operación de DISK_READ
+    const readResult = await Disk.readPage(pid, pageNumber);
+    
+    if (!readResult.success) {
+      return {
+        success: false,
+        error: 'Failed to read page from disk',
+        pid,
+        pageNumber,
+        diskError: readResult.error,
+        hadDiskIO,
+      };
+    }
+    
+    diskOperation = readResult.operation;
+  } else {
+    // Es una página nueva, asignar espacio en el disco
+    const allocResult = Disk.allocatePage(pid, pageNumber);
+    
+    if (!allocResult.success) {
+      // No es crítico si falla la asignación, continuar
+      console.warn('Failed to allocate page in disk:', allocResult.error);
+    } else {
+      diskOperation = allocResult.operation;
+    }
   }
 
   // Asignar el marco en la memoria física
@@ -172,7 +215,10 @@ export function loadPageIntoFrame(pid, pageNumber, frameNumber, pageTable) {
     pageNumber,
     frameNumber,
     timestamp,
+    origin, // 'RAM' o 'DISK'
+    diskOperation, // Operación de disco ejecutada (DISK_READ o DISK_ALLOCATE)
     simulatedDiskLoad: true, // Indica que se simuló carga desde disco
+    hadDiskIO, // Nueva bandera que indica si hubo I/O de disco real (DISK_READ)
   };
 }
 
@@ -192,9 +238,9 @@ export function loadPageIntoFrame(pid, pageNumber, frameNumber, pageTable) {
  * @param {string} newPid - ID del proceso que necesita el marco
  * @param {number} newPageNumber - Número de página a cargar
  * @param {Array} newPageTable - Tabla de páginas del proceso que necesita el marco
- * @returns {object} Resultado del reemplazo
+ * @returns {Promise<object>} Resultado del reemplazo
  */
-export function clockReplacement(newPid, newPageNumber, newPageTable) {
+export async function clockReplacement(newPid, newPageNumber, newPageTable) {
   const timestamp = getTimestamp();
   const memSnapshot = Memory.getMemorySnapshot();
   const totalFrames = memSnapshot.totalFrames;
@@ -263,16 +309,30 @@ export function clockReplacement(newPid, newPageNumber, newPageTable) {
     bitUso: victimFrameData.bitUso,
   };
 
-  // Obtener tabla de páginas de la víctima
-  // Nota: Necesitamos acceso a todas las tablas de páginas
-  // Como no tenemos acceso directo aquí, registraremos el evento sin actualizar la tabla de la víctima
-  // La actualización se hará desde donde se tenga acceso a todas las tablas
+  // Si la página víctima está modificada (dirty bit = 1), escribir al disco
+  let diskWriteOperation = null;
+  let hadDiskWrite = false; // Bandera para DISK_WRITE
+  if (wasDirty) {
+    hadDiskWrite = true;
+    const writeResult = await Disk.writePage(
+      victimPid, 
+      victimPageNumber, 
+      null, // data simulado 
+      true  // isDirty = true
+    );
+    
+    if (writeResult.success) {
+      diskWriteOperation = writeResult.operation;
+    } else {
+      console.error('Failed to write dirty page to disk:', writeResult.error);
+    }
+  }
 
   // Liberar el marco (esto limpia todos los bits)
   Memory.freeFrame(victimFrame);
 
   // Cargar la nueva página en el marco liberado
-  const loadResult = loadPageIntoFrame(newPid, newPageNumber, victimFrame, newPageTable);
+  const loadResult = await loadPageIntoFrame(newPid, newPageNumber, victimFrame, newPageTable);
 
   if (!loadResult.success) {
     return {
@@ -303,9 +363,15 @@ export function clockReplacement(newPid, newPageNumber, newPageTable) {
       pid: newPid,
       pageNumber: newPageNumber,
       frameNumber: victimFrame,
+      origin: loadResult.origin, // RAM o DISK
     },
     clockPointer: newPointer,
     attempts,
+    diskOperations: {
+      write: diskWriteOperation, // DISK_WRITE si wasDirty
+      read: loadResult.diskOperation, // DISK_READ o DISK_ALLOCATE
+    },
+    hadDiskIO: hadDiskWrite || loadResult.hadDiskIO, // Hubo I/O si hubo WRITE o READ
   };
 
   replacementHistory.push(replacementEvent);
@@ -321,9 +387,15 @@ export function clockReplacement(newPid, newPageNumber, newPageTable) {
       pageNumber: victimPageNumber,
       wasDirty,
     },
+    origin: loadResult.origin,
     timestamp,
     clockPointerAfter: newPointer,
     attempts,
+    diskOperations: {
+      write: diskWriteOperation,
+      read: loadResult.diskOperation,
+    },
+    hadDiskIO: hadDiskWrite || loadResult.hadDiskIO, // Propagar bandera de I/O
     requiresVictimTableUpdate: true, // Indica que la tabla de la víctima debe actualizarse
   };
 }

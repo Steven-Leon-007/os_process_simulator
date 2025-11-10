@@ -12,7 +12,7 @@ import SwapAnimationOverlay from '../memory-panel/SwapAnimationOverlay';
 const INACTIVITY_MIN = 0;
 const INACTIVITY_MAX = 300;
 const INACTIVITY_STEP = 5;
-const INACTIVITY_DEFAULT = 45;
+const INACTIVITY_DEFAULT = 0;
 
 const AppShell = () => {
   const { soundEnabled, setSoundEnabled } = useSound();
