@@ -6,7 +6,35 @@ import * as Disk from "./disk.js";
 let transitionConfig = {
   onMemoryUpdate: null, // Callback para notificar actualizaciones de memoria
   onProcessUpdate: null, // Callback para notificar actualizaciones de procesos (para bloqueo I/O)
+  simulationSpeed: 6000, // Velocidad base de simulación en ms (default: 6000ms)
 };
+
+/**
+ * Configura la velocidad de simulación para ajustar tiempos dinámicamente
+ * @param {number} speed - Velocidad en ms (tiempo entre transiciones en modo auto)
+ */
+export function setSimulationSpeed(speed) {
+  transitionConfig.simulationSpeed = speed;
+  
+  // Ajustar el delay de I/O de disco proporcionalmente
+  // Velocidad base: 6000ms → I/O: 3000ms (50%)
+  // Fórmula: ioDelay = speed * 0.5
+  const ioDelay = Math.max(1000, speed * 0.5); // Mínimo 1 segundo
+  Disk.initializeDisk(ioDelay, true);
+}
+
+/**
+ * Obtiene el tiempo de delay proporcional a la velocidad de simulación
+ * @param {number} baseTime - Tiempo base en ms
+ * @param {number} baseFactor - Factor del tiempo base (ej: 0.5 = 50%)
+ * @returns {number} Tiempo ajustado en ms
+ */
+function getScaledDelay(baseFactor) {
+  // Calcular delay proporcional a la velocidad
+  // baseFactor: 0.083 = ~500ms con velocidad 6000ms
+  // baseFactor: 0.017 = ~100ms con velocidad 6000ms
+  return Math.max(50, transitionConfig.simulationSpeed * baseFactor);
+}
 
 /**
  * Configura el callback de actualización de memoria
@@ -147,13 +175,15 @@ function transition(process, toState, cause = "manual") {
     
     // Simular MÚLTIPLES accesos a memoria cuando el proceso está en ejecución
     // Un proceso en ejecución típicamente hace varios accesos a memoria
-    const numAccesses = Math.floor(Math.random() * 3) + 2; // Entre 2 y 4 accesos
+    // Reducir número de accesos para evitar múltiples transiciones simultáneas
+    const numAccesses = Math.floor(Math.random() * 2) + 1; // Entre 1 y 2 accesos (reducido)
     
     // Ejecutar accesos secuencialmente con un delay inicial
     // para que la UI tenga tiempo de mostrar el estado RUNNING
     (async () => {
-      // Esperar 500ms para que la UI muestre el estado RUNNING
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Esperar proporcionalmente a la velocidad (500ms con velocidad base 6000ms = ~8.3%)
+      const initialDelay = getScaledDelay(0.083);
+      await new Promise(resolve => setTimeout(resolve, initialDelay));
       
       for (let i = 0; i < numAccesses; i++) {
         try {
@@ -397,8 +427,8 @@ async function simulateMemoryAccess(process) {
   const pageTable = MMU.getProcessPageTable(process.pid);
   
   // Decidir si intentar acceder a una página no cargada (para forzar page faults)
-  // 50% de probabilidad de acceder a página no cargada si hay páginas sin cargar
-  const shouldForcePageFault = Math.random() < 0.8;
+  // 30% de probabilidad de acceder a página no cargada si hay páginas sin cargar
+  const shouldForcePageFault = Math.random() < 0.3;
   
   let logicalAddress;
   
@@ -473,8 +503,10 @@ async function simulateMemoryAccess(process) {
       transitionConfig.onProcessUpdate(blockedProcess);
     }
     
-    // Dar tiempo a la UI para mostrar el estado WAITING
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Dar tiempo a la UI para mostrar el estado WAITING (proporcional a velocidad)
+    // 100ms con velocidad base 6000ms = ~1.67%
+    const waitingDelay = getScaledDelay(0.0167);
+    await new Promise(resolve => setTimeout(resolve, waitingDelay));
     
     // Intentar manejar el page fault (esto incluye I/O de disco y toma tiempo)
     const faultResult = await MMU.handlePageFault(process.pid, pageNumber);
@@ -507,8 +539,10 @@ async function simulateMemoryAccess(process) {
       transitionConfig.onProcessUpdate(unblockedProcess);
     }
     
-    // Dar tiempo a la UI para mostrar el estado READY antes de continuar
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Dar tiempo a la UI para mostrar el estado READY antes de continuar (proporcional a velocidad)
+    // 100ms con velocidad base 6000ms = ~1.67%
+    const readyDelay = getScaledDelay(0.0167);
+    await new Promise(resolve => setTimeout(resolve, readyDelay));
 
     return {
       success: faultResult.success,

@@ -23,6 +23,9 @@ export function SimulationProvider({ children }) {
         Memory.initializeMemory(TOTAL_FRAMES, PAGE_SIZE);
         MMU.initializeMMU(PAGE_SIZE);
         
+        // Configurar velocidad inicial en FSM
+        FSM.setSimulationSpeed(speed);
+        
         // Inicializar estado de memoria
         const initialState = Memory.getMemorySnapshot();
         setMemoryState(initialState);
@@ -100,6 +103,8 @@ export function SimulationProvider({ children }) {
     const handleSetSpeed = (newSpeed) => {
         setSpeed(newSpeed);
         engine.setSpeed(newSpeed);
+        // También configurar la velocidad en FSM para ajustar delays dinámicamente
+        FSM.setSimulationSpeed(newSpeed);
     };
 
     // Actualizar estado de memoria desde los servicios
